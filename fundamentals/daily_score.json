@@ -1,0 +1,15 @@
+{
+  "date": "2026-05-26",
+  "symbol": "XRPUSDT",
+  "macro_score": 0,
+  "dxy_score": 0,
+  "economic_events_score": 0,
+  "crypto_catalyst_score": 0,
+  "funding_oi_score": 0,
+  "liquidation_score": 0,
+  "trend_environment_score": 16,
+  "total_score": 16,
+  "bias": "choppy",
+  "notes": "Low-conviction/choppy default. Score below 17 blocks normal live trading."
+}
+

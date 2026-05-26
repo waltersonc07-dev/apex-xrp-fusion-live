@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: apex-xrp-fusion-live
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.webhook_server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: LIVE_TRADING
+        value: "false"
+      - key: MICRO_LIVE
+        value: "false"
+      - key: FULL_LIVE
+        value: "false"
+      - key: RISK_MODE
+        value: "BACKTEST_ONLY"
+      - key: TRADINGVIEW_WEBHOOK_SECRET
+        sync: false
+      - key: BINGX_API_KEY
+        sync: false
+      - key: BINGX_API_SECRET
+        sync: false
+

@@ -1,0 +1,23 @@
+# Trade Distribution Report
+
+- total trades: 916
+- wins: 275
+- losses: 641
+- win rate: 30.021834061135372
+- average win: 47.70184653289084
+- average loss: -23.811013392535727
+- largest win: 116.68609912244098
+- largest loss: -35.34512930974866
+- profit factor: 0.8594724811442033
+- max drawdown: 24.103996033769164
+- consecutive wins: 3
+- consecutive losses: 16
+- stop loss exits count: 626
+- take profit exits count: 270
+- flip exits count: 20
+- ambiguous candles count: 2
+- average planned RR: 2.4761928517916845
+- average realized R: -0.1063069841404495
+- median realized R: -1.073140900840689
+- average fees per trade: 2.268640946512963
+- average slippage per trade: 0.9074564119874294

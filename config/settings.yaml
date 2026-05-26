@@ -1,0 +1,79 @@
+strategy:
+  name: APEX_XRP_FUSION_LIVE_V1
+  symbol: XRPUSDT
+  timeframe: 1h
+  supertrend_atr_length: 12
+  supertrend_multiplier: 3.0
+  ema_fast: 9
+  ema_slow: 21
+  dema_length: 200
+  atr_length: 12
+  stop_atr_mult: 1.5
+  tp_atr_mult: 3.0
+  min_rr: 2.0
+  use_flip_exit: true
+  use_breakeven: true
+  resistance_buffer_pct: 0.25
+  support_buffer_pct: 0.25
+
+risk:
+  mode: BACKTEST_ONLY
+  micro_live_risk_pct: 0.10
+  normal_live_risk_pct: 0.25
+  max_daily_loss_pct: 0.50
+  max_weekly_loss_pct: 2.0
+  max_trades_per_day: 1
+  max_open_positions: 1
+  max_drawdown_shutdown_pct: 12.0
+  allow_leverage: false
+  max_leverage: 1
+
+backtest:
+  initial_equity: 10000.0
+  entry_on_close: false
+  process_orders_on_close: false
+  same_bar_policy: stop_first
+  commission_pct: 0.05
+  slippage_bps: 2
+  min_slippage_abs: 0.0
+
+fundamental_gate:
+  full_allowed_score: 26
+  reduced_allowed_score: 22
+  micro_only_score: 17
+  block_below_score: 17
+
+levels:
+  resistance: [1.3620, 1.3671, 1.3712, 1.3800, 1.4000, 1.4200, 1.4500]
+  support: [1.3455, 1.3430, 1.3426, 1.3330, 1.3000, 1.2800]
+
+execution:
+  webhook_secret_env: TRADINGVIEW_WEBHOOK_SECRET
+  live_trading_env: LIVE_TRADING
+  exchange: BINGX
+  dry_run_default: true
+
+deployment:
+  project_name: apex-xrp-fusion-live
+  render_service_name: apex-xrp-fusion-live
+  github_repo: https://github.com/waltersonc07/apex-xrp-fusion-live.git
+
+validation:
+  min_profit_factor: 1.50
+  min_oos_profit_factor: 1.20
+  max_drawdown_pct: 12.0
+  min_total_trades: 150
+  require_positive_expectancy: true
+  require_positive_average_trade_after_fees: true
+  require_doubled_fees_profitability: true
+  require_increased_slippage_profitability: true
+  require_parameter_robustness: true
+  allow_micro_live_after_pass: true
+  allow_full_live_after_pass: false
+
+stress_test:
+  fee_multipliers: [1, 2]
+  slippage_multipliers: [1, 2, 3]
+  entry_delay_candles: [0, 1, 2]
+  supertrend_multipliers: [2.8, 3.0, 3.2]
+  stop_atr_multipliers: [1.3, 1.5, 1.7]
