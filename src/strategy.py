@@ -40,6 +40,10 @@ def _four_hour_dema_slope(close: pd.Series, length: int, lookback_bars: int = 5)
     return slope_4h.reindex(close.index, method="ffill").fillna(0.0)
 
 
+def _within_tolerance(price: pd.Series, reference: pd.Series, tolerance: float) -> pd.Series:
+    return ((price - reference).abs() / reference.abs().replace(0, float("nan")) <= tolerance).fillna(False)
+
+
 def generate_signals(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     cfg = config["strategy"]
     levels = config["levels"]
@@ -57,6 +61,12 @@ def generate_signals(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         out["rsi"] = rsi(out["close"], int(cfg.get("rsi_length", 14)))
     if cfg.get("use_4h_dema_slope"):
         out["dema_4h_slope"] = _four_hour_dema_slope(out["close"], cfg["dema_length"])
+    if cfg.get("use_pullback_location"):
+        tolerance = float(cfg.get("pullback_tolerance", 0.003))
+        long_touch = _within_tolerance(out["low"], out["ema_slow"], tolerance) | _within_tolerance(out["low"], out["supertrend"], tolerance)
+        short_touch = _within_tolerance(out["high"], out["ema_slow"], tolerance) | _within_tolerance(out["high"], out["supertrend"], tolerance)
+        out["long_pullback_ok"] = long_touch.shift(1, fill_value=False).rolling(3, min_periods=1).max().astype(bool)
+        out["short_pullback_ok"] = short_touch.shift(1, fill_value=False).rolling(3, min_periods=1).max().astype(bool)
 
     long_states = []
     short_states = []
@@ -85,9 +95,8 @@ def generate_signals(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         long_location_ok = True
         short_location_ok = True
         if cfg.get("use_pullback_location"):
-            location_buffer = float(cfg.get("pullback_buffer_pct", 0.75))
-            long_location_ok = _near_level(price, levels["support"], location_buffer)
-            short_location_ok = _near_level(price, levels["resistance"], location_buffer)
+            long_location_ok = bool(row["long_pullback_ok"])
+            short_location_ok = bool(row["short_pullback_ok"])
         long_4h_ok = True
         short_4h_ok = True
         if cfg.get("use_4h_dema_slope"):
@@ -99,8 +108,8 @@ def generate_signals(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         long_rsi_ok = True
         short_rsi_ok = True
         if cfg.get("use_rsi_momentum"):
-            long_rsi_ok = float(row["rsi"]) >= float(cfg.get("rsi_long_min", 50))
-            short_rsi_ok = float(row["rsi"]) <= float(cfg.get("rsi_short_max", 50))
+            long_rsi_ok = float(row["rsi"]) > float(cfg.get("rsi_long_min", 50))
+            short_rsi_ok = float(row["rsi"]) < float(cfg.get("rsi_short_max", 50))
 
         long_state = (
             cfg.get("trade_longs", True)

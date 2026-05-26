@@ -107,7 +107,7 @@ Run the expanded 9-row strategy diagnostic leaderboard:
 .\.venv\Scripts\python.exe -m src.core_diagnostic --csv data/raw/xrpusdt_1h.csv
 ```
 
-The report is written to `reports/core_diagnostic_report.md`. It tests 9 variant rows across 8 variant families and keeps live trading blocked unless the main validation gate passes.
+The reports are written to `reports/core_diagnostic_report.md` and `reports/core_diagnostic_leaderboard.csv`. It tests 9 variant rows across 8 variant families, uses the last 20% of candles as OOS, and keeps live trading blocked unless every diagnostic gate passes.
 
 ## TradingView Pine Script
 
