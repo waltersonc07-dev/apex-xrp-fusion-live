@@ -19,7 +19,7 @@ def run_stress_tests(df: pd.DataFrame, config: dict, base_fee_bps: float = 5, ba
     stress_cfg = config["stress_test"]
     summary = {
         "normal": run_backtest_on_df(df, config, base_fee_bps, base_slippage_bps, save_trades_path=None),
-        "doubled_fees": run_backtest_on_df(df, config, base_fee_bps * 2, base_slippage_bps, save_trades_path=None),
+        "doubled_fees": run_backtest_on_df(df, config, base_fee_bps * 2, base_slippage_bps * 2, save_trades_path=None),
         "slippage_2x": run_backtest_on_df(df, config, base_fee_bps, base_slippage_bps * 2, save_trades_path=None),
         "slippage_3x": run_backtest_on_df(df, config, base_fee_bps, base_slippage_bps * 3, save_trades_path=None),
         "delayed_entry_1": run_backtest_on_df(df, config, base_fee_bps, base_slippage_bps, entry_delay_candles=1, save_trades_path=None),

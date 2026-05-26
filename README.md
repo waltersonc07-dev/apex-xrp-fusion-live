@@ -101,11 +101,13 @@ Generated reports include:
 
 ## Run Core Diagnostic
 
-`src.core_diagnostic` is not implemented yet. Planned command:
+Run the expanded 9-row strategy diagnostic leaderboard:
 
 ```powershell
 .\.venv\Scripts\python.exe -m src.core_diagnostic --csv data/raw/xrpusdt_1h.csv
 ```
+
+The report is written to `reports/core_diagnostic_report.md`. It tests 9 variant rows across 8 variant families and keeps live trading blocked unless the main validation gate passes.
 
 ## TradingView Pine Script
 
@@ -213,4 +215,3 @@ If the current branch is `master`, use the matching branch name or rename only a
 4. Set `FULL_LIVE=false`.
 5. Stop the FastAPI server.
 6. Disable TradingView alerts.
-
