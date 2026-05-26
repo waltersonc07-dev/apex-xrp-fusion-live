@@ -7,10 +7,10 @@
 - total_trades: 916
 
 ## doubled_fees
-- net_profit: -3823.8983602644093
-- profit_factor: 0.7431290822482932
-- max_drawdown_pct: 39.71966805663449
-- total_trades: 916
+- net_profit: -4047.5387363259424
+- profit_factor: 0.712221563603954
+- max_drawdown_pct: 41.419166728176364
+- total_trades: 852
 
 ## slippage_2x
 - net_profit: -2573.1962454768295
