@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from pathlib import Path
 
 import yaml
@@ -14,6 +15,7 @@ from .risk_engine import approve_trade
 
 load_dotenv()
 app = FastAPI(title="APEX XRP Fusion Live")
+logger = logging.getLogger("apex.webhook")
 
 
 def load_config(path: str | Path = "config/settings.yaml") -> dict:
@@ -47,6 +49,15 @@ async def tradingview_webhook(request: Request, x_webhook_secret: str | None = H
     account_state = {"equity": 1000.0, "daily_loss_pct": 0, "weekly_loss_pct": 0, "open_positions": 0, "trades_today": 0, "seen_signal_ids": set()}
     market_state = {"spread_pct": float(payload.get("spread_pct", 0.05)), "max_spread_pct": 0.25}
     decision = approve_trade(signal, account_state, market_state, score, config)
+    logger.info(
+        "webhook decision signal_id=%s symbol=%s action=%s approved=%s reason=%s mode=%s",
+        payload.get("signal_id"),
+        payload.get("symbol"),
+        payload.get("action"),
+        decision["approved"],
+        decision["reason"],
+        decision["mode"],
+    )
 
     result = {"risk_engine": decision, "exchange": None}
     if decision["approved"]:
