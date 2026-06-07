@@ -124,7 +124,37 @@ trades >= 40 per asset, must beat buy-and-hold, must survive 2x fees and
 candidate, not an authorization. Live activation requires explicit owner
 approval. See [SAFETY.md](SAFETY.md).
 
-The data downloader for daily FX/Gold CSVs ships in PR 3.
+### Phase 10 data ingestion
+
+Daily OHLC for the Phase 10 symbol set is fetched from Yahoo Finance's public
+chart endpoint (no API key required). Run:
+
+```powershell
+.\.venv\Scripts\python.exe -m src.phase10_data_downloader --years 10
+```
+
+This writes CSVs to `data/raw/<symbol>_1d.csv` with the schema
+`timestamp,open,high,low,close,volume` and a summary JSON to
+`reports/phase10_data_summary.json`.
+
+Symbol mapping (Yahoo tickers):
+
+| Phase 10 symbol | Yahoo ticker | Notes |
+|---|---|---|
+| EURUSD | `EURUSD=X` | spot FX |
+| GBPUSD | `GBPUSD=X` | spot FX |
+| USDJPY | `USDJPY=X` | spot FX (control / benchmark) |
+| XAUUSD | `GC=F` | gold futures continuous — Yahoo has no spot XAUUSD daily history; daily correlation with spot is >0.99 |
+
+Validation invariants enforced before writing: ascending unique timestamps,
+no NaN rows, `high >= max(open, close, low)`, `low <= min(open, close, high)`,
+non-negative volume, no future-dated bars. Tiny floating-point inconsistencies
+in Yahoo's feed (sub-pip) are repaired by clamping `high`/`low` to the actual
+envelope; larger discrepancies are rejected.
+
+The downloader is read-only data ingestion. It never references
+`LIVE_TRADING`, `MICRO_LIVE`, `FULL_LIVE`, API keys, or the XRP strategy.
+See [SAFETY.md](SAFETY.md).
 
 ## Run Core Diagnostic
 
