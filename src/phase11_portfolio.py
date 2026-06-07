@@ -38,6 +38,7 @@ import math
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
+from .phase11_bayesian import PosteriorPF, posterior_for_portfolio
 from .phase11_gate import (
     GateResult,
     MAX_IS_TO_OOS_SHARPE_DEGRADATION_PCT,
@@ -121,6 +122,9 @@ class PortfolioVerdict:
     gate: GateResult
     # Post-gate downgrade applied for control catastrophe / concentration.
     downgrade_reasons: tuple[str, ...]
+    # Optional Bayesian posterior on portfolio OOS PF (PR 5). None when
+    # the Bayesian layer is toggled off via build_portfolio_verdicts.
+    posterior_pf: PosteriorPF | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -501,6 +505,7 @@ def build_portfolio_verdicts(
     n_tested: int,
     primary_symbols: tuple[str, ...] = PRIMARY_PORTFOLIO_SYMBOLS,
     control_symbols: tuple[str, ...] = CONTROL_PORTFOLIO_SYMBOLS,
+    include_posterior: bool = True,      # PR 5 toggle
 ) -> list[PortfolioVerdict]:
     """Group ``SearchRow`` rows by combo and emit a portfolio verdict.
 
@@ -543,6 +548,7 @@ def build_portfolio_verdicts(
                 summary=empty_summary,
                 gate=gate,
                 downgrade_reasons=(),
+                posterior_pf=None,
             ))
             continue
 
@@ -559,6 +565,7 @@ def build_portfolio_verdicts(
         gate, downgrades = evaluate_portfolio_gate(
             summary=summary, folds=folds, n_tested=n_tested,
         )
+        posterior = posterior_for_portfolio(folds) if include_posterior else None
         out.append(PortfolioVerdict(
             combo_key=combo_key,
             variant=bucket["variant"],
@@ -568,6 +575,7 @@ def build_portfolio_verdicts(
             summary=summary,
             gate=gate,
             downgrade_reasons=downgrades,
+            posterior_pf=posterior,
         ))
 
     # Sort deterministically for stable CSVs.
@@ -580,8 +588,10 @@ def build_portfolio_verdicts(
 # ---------------------------------------------------------------------------
 
 
-# Locked column order for the portfolio CSV. PR 5 may APPEND
-# (posterior_pf_lo, posterior_pf_hi, ...) but must not reorder.
+# Locked column order for the portfolio CSV. PR 5 appends posterior
+# columns at the end. Future PRs may also append but must not reorder
+# or rename. The lock test in tests/test_phase11_portfolio.py enforces
+# the existing prefix.
 PORTFOLIO_CSV_COLUMNS: tuple[str, ...] = (
     "combo_key",
     "variant",
@@ -608,6 +618,11 @@ PORTFOLIO_CSV_COLUMNS: tuple[str, ...] = (
     "verdict",
     "gate_reason",
     "downgrade_reasons",
+    # ---- PR 5: optional Bayesian posterior --------------------------
+    "posterior_pf_p05",
+    "posterior_pf_p50",
+    "posterior_pf_p95",
+    "posterior_pf_prob_gt_1",
 )
 
 
@@ -655,6 +670,12 @@ def portfolio_verdict_to_csv_row(v: PortfolioVerdict) -> dict:
         "verdict": g.verdict,
         "gate_reason": g.reason,
         "downgrade_reasons": "; ".join(v.downgrade_reasons),
+        # PR 5: posterior columns. Empty when Bayesian layer is off.
+        "posterior_pf_p05": _fmt(v.posterior_pf.p05) if v.posterior_pf else "",
+        "posterior_pf_p50": _fmt(v.posterior_pf.p50) if v.posterior_pf else "",
+        "posterior_pf_p95": _fmt(v.posterior_pf.p95) if v.posterior_pf else "",
+        "posterior_pf_prob_gt_1":
+            _fmt(v.posterior_pf.prob_gt_1) if v.posterior_pf else "",
     }
 
 
