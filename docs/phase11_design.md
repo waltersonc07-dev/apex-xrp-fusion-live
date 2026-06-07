@@ -174,3 +174,121 @@ These are the decisions worth confirming before Phase 11 / PR 1 lands:
 5. **Phase 11 acceptance thresholds (median OOS PF ≥ 1.3, Sharpe ≥ 0.7)** — keep, tighten, or loosen?
 
 Defaults are reasonable starting points; the owner can override before implementation.
+
+---
+
+# Phase 11 Amendment A — Owner Decisions (2026-06-07)
+
+**Status**: Binding. These rules supersede any conflicting default above and MUST be implemented by the first Phase 11 code PR (`phase11/pr1-walkforward-orchestrator`). No Phase 11 variant coding may begin until each item below is wired into code and protected by a test.
+
+The owner reviewed the design and approved Phase 11 with stricter anti-overfit guardrails. The decisions, verbatim by item, are codified here.
+
+## A.1 Walk-forward design — APPROVED
+
+Keep the **5-fold expanding** WFO from Section 2. Expanding (train on past, test on future) matches real trading and is preferred over random splits.
+
+## A.2 Parameter grid — APPROVED with cap and freeze rule
+
+- Keep the ~140-combination grid defined in Section 3.
+- **Hard cap**: the total grid size MUST NOT exceed **140 combinations** across all variants combined.
+- **Freeze rule**: the grid is frozen *before* the first WFO run. The frozen grid is checked into `config/phase11_grid.yaml` in Phase 11 / PR 2.
+- **No post-hoc additions**: if a parameter is added or a range widened after results are seen, the entire Phase 11 run is invalidated and must restart from PR 1.
+- Any pre-run change to the grid requires a written justification committed to `docs/phase11_grid_changelog.md` *before* the run, including: parameter added/changed, prior, hypothesis, expected effect.
+
+**Rationale**: more combinations = more data-mining risk. The grid must be a pre-registered hypothesis, not a search-until-you-find exercise.
+
+## A.3 Multiple-testing correction — APPROVED with full reporting
+
+Replace Section 4's single-number Bonferroni with a **two-track report**. For every variant × parameter combination, the Phase 11 verdict report MUST include:
+
+| Column | Definition |
+|---|---|
+| `raw_p` | Uncorrected p-value for the OOS performance vs the null (PF = 1.0) |
+| `bonferroni_p` | `raw_p × N_tested` where `N_tested` is the total grid size (cap 140) |
+| `n_tested` | The actual grid size used in this run (must equal the frozen grid size) |
+| `survives_raw` | `raw_p < 0.05` |
+| `survives_bonferroni` | `bonferroni_p < 0.05` |
+| `verdict` | `PASS` only if `survives_bonferroni == true` AND all gates in A.5 pass |
+
+Both tracks are reported so reviewers can see whether a "winner" is real or simply lucky. Acceptance still requires the **Bonferroni-adjusted** result to survive; raw is informational only.
+
+## A.4 Portfolio aggregation — APPROVED with primary/control split
+
+Section 5's portfolio layer is amended to **separate primary from control assets**:
+
+- **Primary assets** (eligible to drive a PASS verdict): EURUSD, GBPUSD, XAUUSD.
+- **Control assets** (informational only, can BLOCK but cannot PASS): USDJPY and any future non-primary pair.
+- The portfolio PF/Sharpe/DD used in the acceptance gate is computed on **primary assets only**.
+- Control assets are reported alongside but a control failure does NOT block a primary PASS — *unless* the control failure is catastrophic (per-control PF < 0.5 in 3 of 5 folds), in which case the variant is downgraded to `WATCH` and cannot become a MICRO_LIVE candidate.
+
+**Rationale**: a strategy that only works on one random pair is weaker than one that generalizes; but a weak control pair shouldn't destroy a valid primary edge.
+
+## A.5 Acceptance gate — APPROVED with two added rules
+
+The Section 2.2 gate is amended. A variant PASSes Phase 11 if and only if **ALL** of the following hold (existing rules in regular type, **new rules in bold**):
+
+1. Median OOS PF ≥ **1.30** across the 5 folds (primary portfolio).
+2. Median OOS Sharpe ≥ **0.70** across the 5 folds (primary portfolio).
+3. At least **3 of 5 folds** have OOS PF > 1.0.
+4. Per-fold IS→OOS Sharpe degradation ≤ **30%**.
+5. Aggregated OOS trade count across 5 folds × 3 primary symbols ≥ **40**.
+6. **NEW — Minimum OOS trades per fold**: every one of the 5 folds must have ≥ **5 OOS trades** at the primary-portfolio level. A fold with fewer than 5 trades is treated as `INSUFFICIENT_DATA` and the variant is BLOCKed regardless of other metrics.
+7. **NEW — No single-pair dominance**: no single primary pair may contribute more than **40%** of total net profit across the full WFO. If one pair exceeds 40%, the variant is downgraded to `WATCH` and cannot become a MICRO_LIVE candidate.
+8. Bonferroni-adjusted p-value < 0.05 (from A.3).
+9. All Phase 10 safety gates still apply at the aggregated level (max DD, stress tests, beat buy-and-hold).
+
+**Rationale**: rules 6 and 7 prevent one lucky pair or one lucky fold from carrying the whole result.
+
+## A.6 Ranking rule — APPROVED, no best-PF-only ranking
+
+The Phase 11 verdict report MUST rank candidates by a composite score, **NOT** by best PF alone. The ranking order, in priority:
+
+1. **Median OOS PF** (primary portfolio)
+2. **Worst-fold OOS PF** (stability)
+3. **OOS Sharpe**
+4. **Maximum drawdown** (smaller is better)
+5. **Consistency across pairs** — measured as standard deviation of per-pair OOS PF; lower is better
+6. **Parameter simplicity** — variants with fewer tuned parameters break ties
+
+The report includes all six columns, sorted by rule 1, with ties broken by rule 2, etc. **The single highest-PF variant is NOT the recommended candidate** unless it also wins on stability.
+
+**Rationale**: the best live candidate is not the highest PF — it is the most repeatable one.
+
+## A.7 Live readiness — APPROVED, never auto-activate
+
+Even if a variant passes every gate above, Phase 11 output is **never** a green light for live trading. The verdict report uses exactly these labels:
+
+| Label | Meaning |
+|---|---|
+| `BLOCKED` | Fails any gate in A.5 |
+| `WATCH` | Passes some but fails a downgrade rule (A.4 control catastrophe or A.5 rule 7 dominance) |
+| `VALIDATED_RESEARCH_CANDIDATE` | Passes all Phase 11 gates; suitable for further research, NOT live |
+| `MICRO_LIVE_CANDIDATE_REQUIRES_MANUAL_REVIEW` | Passes all Phase 11 gates AND has 60+ days of paper-trading evidence; still requires explicit owner sign-off in `docs/microlive_approvals.md` before any flag flip |
+
+**Actual runtime mode remains `BACKTEST_ONLY`** regardless of verdict. `LIVE_TRADING`, `MICRO_LIVE`, and `FULL_LIVE` stay `false`. No code path in Phase 11 may set, suggest, or auto-toggle any of these flags. The flip is always a manual owner action in the Render dashboard.
+
+## A.8 Implementation checklist (binding on Phase 11 / PR 1)
+
+The first Phase 11 code PR is BLOCKed from merge until each item is implemented and covered by a test:
+
+- [ ] Frozen grid file `config/phase11_grid.yaml` with `n_combos ≤ 140`, validated at startup
+- [ ] Grid changelog file `docs/phase11_grid_changelog.md` initialized
+- [ ] Verdict report emits all 6 columns from A.3 (raw_p, bonferroni_p, n_tested, survives_raw, survives_bonferroni, verdict)
+- [ ] Primary/control split in portfolio aggregator (A.4)
+- [ ] Acceptance gate enforces rules 6 and 7 from A.5 (min-trades-per-fold, no-single-pair-dominance)
+- [ ] Ranking output sorts by composite key from A.6
+- [ ] Verdict labels restricted to the four strings in A.7
+- [ ] Test: a synthetic single-pair-dominant variant is downgraded to WATCH
+- [ ] Test: a synthetic low-OOS-trade fold blocks the variant
+- [ ] Test: a synthetic high-raw / failed-Bonferroni result is BLOCKed (not PASSed)
+- [ ] Test: no code path can set `risk.mode`, `LIVE_TRADING`, `MICRO_LIVE`, or `FULL_LIVE`
+
+## A.9 Supersession notes
+
+Where this amendment conflicts with sections 1–11 above, **this amendment wins**. Specifically:
+
+- Section 2.2 acceptance rule → superseded by A.5
+- Section 4 multiple-testing handling → superseded by A.3
+- Section 5 portfolio aggregation → superseded by A.4 (primary/control split)
+- Section 7 PR plan → PR 1 scope expanded by A.8 checklist
+- Section 11 open questions → resolved by owner; defaults stand as amended
