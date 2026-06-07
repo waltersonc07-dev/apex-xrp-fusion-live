@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-07T13:25:15.164614+00:00",
-  "years": 10,
+  "generated_at": "2026-06-07T15:42:11.291936+00:00",
+  "years": 20,
   "output_dir": "data/raw",
   "symbol_map": {
     "EURUSD": "EURUSD=X",
@@ -12,8 +12,8 @@
     {
       "symbol": "EURUSD",
       "ticker": "EURUSD=X",
-      "rows": 2607,
-      "start": "2016-05-30T00:00:00+00:00",
+      "rows": 5192,
+      "start": "2006-05-30T00:00:00+00:00",
       "end": "2026-06-05T00:00:00+00:00",
       "path": "data/raw/eurusd_1d.csv",
       "warnings": []
@@ -21,8 +21,8 @@
     {
       "symbol": "GBPUSD",
       "ticker": "GBPUSD=X",
-      "rows": 2607,
-      "start": "2016-05-30T00:00:00+00:00",
+      "rows": 5204,
+      "start": "2006-05-30T00:00:00+00:00",
       "end": "2026-06-07T00:00:00+00:00",
       "path": "data/raw/gbpusd_1d.csv",
       "warnings": []
@@ -30,8 +30,8 @@
     {
       "symbol": "XAUUSD",
       "ticker": "GC=F",
-      "rows": 2518,
-      "start": "2016-05-31T00:00:00+00:00",
+      "rows": 5035,
+      "start": "2006-05-31T00:00:00+00:00",
       "end": "2026-06-05T00:00:00+00:00",
       "path": "data/raw/xauusd_1d.csv",
       "warnings": [
@@ -41,8 +41,8 @@
     {
       "symbol": "USDJPY",
       "ticker": "USDJPY=X",
-      "rows": 2607,
-      "start": "2016-05-30T00:00:00+00:00",
+      "rows": 5192,
+      "start": "2006-05-30T00:00:00+00:00",
       "end": "2026-06-05T00:00:00+00:00",
       "path": "data/raw/usdjpy_1d.csv",
       "warnings": []

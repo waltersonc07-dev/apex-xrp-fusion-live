@@ -30,108 +30,115 @@ as a MICRO_LIVE candidate. Live activation still requires explicit owner approva
 
 | Variant | Trades | Win% | PF | OOS PF | DD% | Sharpe | Strat% | B&H% | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| V0 | 4 | 75.0 | 1.82 | 0.00 | 0.4 | 3.35 | 0.3 | -3.1 | BLOCK |
-| V1 | 5 | 60.0 | 1.67 | 0.00 | 0.4 | 2.72 | 0.3 | -3.1 | BLOCK |
-| V2 | 9 | 22.2 | 0.80 | inf | 1.8 | -1.38 | -0.5 | -3.1 | BLOCK |
-| V3 | 11 | 18.2 | 1.58 | 1.67 | 1.1 | 2.25 | 0.8 | -3.1 | BLOCK |
+| V0 | 15 | 40.0 | 0.34 | 0.00 | 1.5 | -6.47 | -1.3 | -16.6 | BLOCK |
+| V1 | 21 | 42.9 | 0.62 | 7.40 | 1.2 | -2.86 | -0.9 | -16.6 | BLOCK |
+| V2 | 14 | 42.9 | 1.94 | 0.07 | 1.0 | 4.02 | 3.1 | -16.6 | BLOCK |
+| V3 | 21 | 33.3 | 1.13 | 1.31 | 2.4 | 0.76 | 0.6 | -16.6 | BLOCK |
 
 **EURUSD / V0 failed rules:**
+- profit factor 0.34 below 1.50
 - out-of-sample profit factor 0.00 below 1.20
-- trades 4 below 40
-- walk-forward unstable: 1/3 windows profitable
-
-**EURUSD / V1 failed rules:**
-- out-of-sample profit factor 0.00 below 1.20
-- trades 5 below 40
-
-**EURUSD / V2 failed rules:**
-- profit factor 0.80 below 1.50
-- sharpe -1.38 below 0.80
-- trades 9 below 40
+- sharpe -6.47 below 0.80
+- trades 15 below 40
 - doubled-fees stress test not profitable
 - doubled-slippage stress test not profitable
 - walk-forward unstable: 1/3 windows profitable
 
+**EURUSD / V1 failed rules:**
+- profit factor 0.62 below 1.50
+- sharpe -2.86 below 0.80
+- trades 21 below 40
+- doubled-fees stress test not profitable
+- doubled-slippage stress test not profitable
+- walk-forward unstable: 1/3 windows profitable
+
+**EURUSD / V2 failed rules:**
+- out-of-sample profit factor 0.07 below 1.20
+- trades 14 below 40
+
 **EURUSD / V3 failed rules:**
-- trades 11 below 40
+- profit factor 1.13 below 1.50
+- sharpe 0.76 below 0.80
+- trades 21 below 40
 
 ### GBPUSD
 
 | Variant | Trades | Win% | PF | OOS PF | DD% | Sharpe | Strat% | B&H% | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| V0 | 3 | 33.3 | 0.85 | 0.72 | 0.1 | -0.93 | -0.0 | -13.2 | BLOCK |
-| V1 | 9 | 44.4 | 1.98 | 0.72 | 0.2 | 4.10 | 0.4 | -13.2 | BLOCK |
-| V2 | 7 | 0.0 | 0.00 | 0.33 | 2.8 | -35.24 | -2.8 | -13.2 | BLOCK |
-| V3 | 11 | 18.2 | 0.10 | 0.34 | 3.0 | -15.94 | -2.8 | -13.2 | BLOCK |
+| V0 | 6 | 50.0 | 1.31 | 0.63 | 0.2 | 1.68 | 0.1 | -32.8 | BLOCK |
+| V1 | 16 | 43.8 | 0.80 | 0.58 | 0.9 | -1.37 | -0.3 | -32.8 | BLOCK |
+| V2 | 12 | 25.0 | 0.25 | 0.08 | 2.9 | -9.75 | -2.9 | -32.8 | BLOCK |
+| V3 | 16 | 31.2 | 0.57 | 0.18 | 2.8 | -3.65 | -1.9 | -32.8 | BLOCK |
 
 **GBPUSD / V0 failed rules:**
-- profit factor 0.85 below 1.50
-- out-of-sample profit factor 0.72 below 1.20
-- sharpe -0.93 below 0.80
-- trades 3 below 40
+- profit factor 1.31 below 1.50
+- out-of-sample profit factor 0.63 below 1.20
+- trades 6 below 40
+- walk-forward unstable: 1/3 windows profitable
+
+**GBPUSD / V1 failed rules:**
+- profit factor 0.80 below 1.50
+- out-of-sample profit factor 0.58 below 1.20
+- sharpe -1.37 below 0.80
+- trades 16 below 40
 - doubled-fees stress test not profitable
 - doubled-slippage stress test not profitable
 - walk-forward unstable: 0/3 windows profitable
 
-**GBPUSD / V1 failed rules:**
-- out-of-sample profit factor 0.72 below 1.20
-- trades 9 below 40
-- walk-forward unstable: 1/3 windows profitable
-
 **GBPUSD / V2 failed rules:**
-- profit factor 0.00 below 1.50
-- out-of-sample profit factor 0.33 below 1.20
-- sharpe -35.24 below 0.80
-- trades 7 below 40
+- profit factor 0.25 below 1.50
+- out-of-sample profit factor 0.08 below 1.20
+- sharpe -9.75 below 0.80
+- trades 12 below 40
 - doubled-fees stress test not profitable
 - doubled-slippage stress test not profitable
 - walk-forward unstable: 0/3 windows profitable
 
 **GBPUSD / V3 failed rules:**
-- profit factor 0.10 below 1.50
-- out-of-sample profit factor 0.34 below 1.20
-- sharpe -15.94 below 0.80
-- trades 11 below 40
+- profit factor 0.57 below 1.50
+- out-of-sample profit factor 0.18 below 1.20
+- sharpe -3.65 below 0.80
+- trades 16 below 40
 - doubled-fees stress test not profitable
 - doubled-slippage stress test not profitable
-- walk-forward unstable: 0/3 windows profitable
+- walk-forward unstable: 1/3 windows profitable
 
 ### XAUUSD
 
 | Variant | Trades | Win% | PF | OOS PF | DD% | Sharpe | Strat% | B&H% | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| V0 | 12 | 33.3 | 0.21 | 2.96 | 1.7 | -8.70 | -1.7 | 91.4 | BLOCK |
-| V1 | 17 | 41.2 | 0.53 | 2.96 | 2.1 | -3.40 | -1.2 | 91.4 | BLOCK |
-| V2 | 14 | 50.0 | 2.66 | 12.72 | 1.5 | 6.05 | 4.8 | 91.4 | BLOCK |
-| V3 | 9 | 33.3 | 0.98 | inf | 1.7 | -0.06 | -0.0 | 91.4 | BLOCK |
+| V0 | 18 | 16.7 | 0.19 | 1.69 | 3.4 | -10.87 | -3.4 | 190.5 | BLOCK |
+| V1 | 25 | 16.0 | 0.15 | 1.69 | 4.5 | -12.15 | -4.5 | 190.5 | BLOCK |
+| V2 | 27 | 29.6 | 1.58 | 23.94 | 3.7 | 1.97 | 5.1 | 190.5 | BLOCK |
+| V3 | 19 | 26.3 | 0.53 | 2.04 | 4.1 | -3.96 | -2.6 | 190.5 | BLOCK |
 
 **XAUUSD / V0 failed rules:**
-- profit factor 0.21 below 1.50
-- sharpe -8.70 below 0.80
-- trades 12 below 40
-- strategy return -1.7% does not beat buy-and-hold 91.4%
+- profit factor 0.19 below 1.50
+- sharpe -10.87 below 0.80
+- trades 18 below 40
+- strategy return -3.4% does not beat buy-and-hold 190.5%
 - doubled-fees stress test not profitable
 - doubled-slippage stress test not profitable
-- walk-forward unstable: 1/3 windows profitable
+- walk-forward unstable: 0/3 windows profitable
 
 **XAUUSD / V1 failed rules:**
-- profit factor 0.53 below 1.50
-- sharpe -3.40 below 0.80
-- trades 17 below 40
-- strategy return -1.2% does not beat buy-and-hold 91.4%
+- profit factor 0.15 below 1.50
+- sharpe -12.15 below 0.80
+- trades 25 below 40
+- strategy return -4.5% does not beat buy-and-hold 190.5%
 - doubled-fees stress test not profitable
 - doubled-slippage stress test not profitable
 - walk-forward unstable: 1/3 windows profitable
 
 **XAUUSD / V2 failed rules:**
-- trades 14 below 40
-- strategy return 4.8% does not beat buy-and-hold 91.4%
+- trades 27 below 40
+- strategy return 5.1% does not beat buy-and-hold 190.5%
 
 **XAUUSD / V3 failed rules:**
-- profit factor 0.98 below 1.50
-- sharpe -0.06 below 0.80
-- trades 9 below 40
-- strategy return -0.0% does not beat buy-and-hold 91.4%
+- profit factor 0.53 below 1.50
+- sharpe -3.96 below 0.80
+- trades 19 below 40
+- strategy return -2.6% does not beat buy-and-hold 190.5%
 - doubled-fees stress test not profitable
 - doubled-slippage stress test not profitable
 
@@ -139,35 +146,29 @@ as a MICRO_LIVE candidate. Live activation still requires explicit owner approva
 
 | Variant | Trades | Win% | PF | OOS PF | DD% | Sharpe | Strat% | B&H% | Verdict |
 |---|---|---|---|---|---|---|---|---|---|
-| V0 | 4 | 75.0 | 19.41 | 0.00 | 0.1 | 8.76 | 1.6 | 42.2 | BLOCK |
-| V1 | 7 | 57.1 | 5.26 | 0.00 | 0.3 | 5.88 | 1.5 | 42.2 | BLOCK |
-| V2 | 12 | 8.3 | 1.09 | 0.00 | 3.0 | 0.46 | 0.5 | 42.2 | BLOCK |
-| V3 | 11 | 27.3 | 0.26 | 0.00 | 1.2 | -7.98 | -1.2 | 42.2 | BLOCK |
+| V0 | 10 | 50.0 | 5.59 | 1.29 | 0.5 | 6.54 | 6.5 | 17.5 | BLOCK |
+| V1 | 26 | 42.3 | 2.75 | 1.29 | 1.4 | 3.48 | 5.8 | 17.5 | BLOCK |
+| V2 | 12 | 41.7 | 6.78 | 0.86 | 1.9 | 7.56 | 17.4 | 17.5 | BLOCK |
+| V3 | 14 | 28.6 | 0.65 | 1.61 | 1.5 | -2.41 | -0.8 | 17.5 | BLOCK |
 
 **USDJPY / V0 failed rules:**
-- out-of-sample profit factor 0.00 below 1.20
-- trades 4 below 40
-- strategy return 1.6% does not beat buy-and-hold 42.2%
+- trades 10 below 40
+- strategy return 6.5% does not beat buy-and-hold 17.5%
 
 **USDJPY / V1 failed rules:**
-- out-of-sample profit factor 0.00 below 1.20
-- trades 7 below 40
-- strategy return 1.5% does not beat buy-and-hold 42.2%
+- trades 26 below 40
+- strategy return 5.8% does not beat buy-and-hold 17.5%
 
 **USDJPY / V2 failed rules:**
-- profit factor 1.09 below 1.50
-- out-of-sample profit factor 0.00 below 1.20
-- sharpe 0.46 below 0.80
+- out-of-sample profit factor 0.86 below 1.20
 - trades 12 below 40
-- strategy return 0.5% does not beat buy-and-hold 42.2%
-- walk-forward unstable: 1/3 windows profitable
+- strategy return 17.4% does not beat buy-and-hold 17.5%
 
 **USDJPY / V3 failed rules:**
-- profit factor 0.26 below 1.50
-- out-of-sample profit factor 0.00 below 1.20
-- sharpe -7.98 below 0.80
-- trades 11 below 40
-- strategy return -1.2% does not beat buy-and-hold 42.2%
+- profit factor 0.65 below 1.50
+- sharpe -2.41 below 0.80
+- trades 14 below 40
+- strategy return -0.8% does not beat buy-and-hold 17.5%
 - doubled-fees stress test not profitable
 - doubled-slippage stress test not profitable
 - walk-forward unstable: 1/3 windows profitable
