@@ -1,0 +1,88 @@
+# Phase 11 — Frozen Parameter Grid
+#
+# This file is the SINGLE SOURCE OF TRUTH for the Phase 11 walk-forward
+# optimization parameter search space. Per docs/phase11_design.md Amendment A
+# section A.2, this grid:
+#
+#   - is FROZEN before the first walk-forward optimization run,
+#   - has a HARD CAP of 140 combinations across all variants combined,
+#   - MUST NOT be modified after results are observed,
+#   - any pre-run change requires a written justification entered into
+#     docs/phase11_grid_changelog.md *before* the run.
+#
+# The Phase 11 grid loader (src/phase11_grid.py) validates this file at
+# startup and refuses to run if:
+#   * total combination count exceeds 140
+#   * any variant references a parameter the engine does not read
+#   * a constraint (fast<slow, exit<=entry) is missing for a grid that needs it
+#
+# Total combinations (computed at load time):
+#   V0 EMA pullback (long-only):   6 fast/slow pairs * 3 RSI * 2 ATR =  36
+#   V1 EMA pullback (long+short):  6 fast/slow pairs * 3 RSI * 2 ATR =  36
+#   V2 Donchian breakout:          8 entry/exit pairs * 3 ATR        =  24
+#   V3 Bollinger squeeze breakout: 3 BB length * 3 BB std * 3 ATR    =  27
+#   ----------------------------------------------------------------------
+#   TOTAL                                                            = 123
+#
+# This is under the 140 hard cap. The choice to trim from the design doc's
+# ~140 estimate is documented in docs/phase11_grid_changelog.md entry #001.
+
+version: 1
+hard_cap: 140
+notes: |
+  Grid frozen 2026-06-07 before phase11/pr3 (acceptance gate) and any WFO
+  run. Every parameter listed below maps to a key the Phase 10 backtest
+  engine (src/phase10_fx_gold_daily.py) actually reads. The 'mid_exit'
+  V3 toggle from the design doc Section 3 was DROPPED because the engine
+  has no corresponding implementation; see changelog entry #001.
+
+variants:
+  V0:
+    description: |
+      EMA pullback, long-only. Engine: _v0_signals. Tunes the fast/slow EMA
+      pair, the RSI cross length, and the ATR stop multiplier used by the
+      exit/risk-sizing layer (atr_stop_mult).
+    parameters:
+      ema_fast: [13, 21]
+      ema_slow: [34, 55, 89]
+      rsi_length: [10, 14, 21]
+      atr_stop_mult: [1.5, 2.5]
+    constraints:
+      - fast_less_than_slow   # ema_fast must be strictly less than ema_slow
+
+  V1:
+    description: |
+      EMA pullback, long+short mirror of V0. Engine: _v1_signals. Same
+      parameter surface as V0; same constraint.
+    parameters:
+      ema_fast: [13, 21]
+      ema_slow: [34, 55, 89]
+      rsi_length: [10, 14, 21]
+      atr_stop_mult: [1.5, 2.5]
+    constraints:
+      - fast_less_than_slow
+
+  V2:
+    description: |
+      Donchian breakout. Engine: _v2_signals. Tunes the entry/exit Donchian
+      channel lengths and the ATR stop multiplier. The engine reads
+      donchian_in and donchian_out; the design doc called these
+      donchian_entry/donchian_exit and we use the engine names.
+    parameters:
+      donchian_in: [10, 20, 40]
+      donchian_out: [5, 10, 20]
+      atr_stop_mult: [1.5, 2.0, 2.5]
+    constraints:
+      - exit_le_entry         # donchian_out must be <= donchian_in
+
+  V3:
+    description: |
+      Bollinger squeeze breakout. Engine: _v3_signals. Tunes the Bollinger
+      length, the Bollinger std multiplier, and the ATR stop multiplier.
+      The design doc's mid_exit toggle was dropped: the engine does not
+      implement a mid-band exit (see changelog entry #001).
+    parameters:
+      bb_length: [14, 20, 30]
+      bb_std: [1.5, 2.0, 2.5]
+      atr_stop_mult: [1.5, 2.0, 2.5]
+    constraints: []
