@@ -117,6 +117,15 @@ DEFAULT_CONFIG: dict = {
     "wf_windows": 3,
     "stress_fee_multiplier": 2.0,
     "stress_slippage_multiplier": 2.0,
+    # ----- Filters (Phase 10 PR 5). Defaults preserve baseline behavior. -----
+    # When ``enable_session_filter`` or ``enable_regime_filter`` is False the
+    # corresponding filter is a no-op, so the unfiltered verdict reproduces
+    # the original Phase 10 numbers bit-for-bit.
+    "enable_session_filter": False,
+    "enable_regime_filter": False,
+    "session_cfg": None,        # falls back to DEFAULT_SESSION_CFG when used
+    "regime_cfg": None,         # falls back to DEFAULT_REGIME_CFG when used
+    "regimes_allowed": None,    # None = all regimes except 'unknown'
 }
 
 
@@ -310,6 +319,36 @@ def _backtest_variant(
 
     sigs = VARIANT_SIGNAL_BUILDERS[variant](df, cfg)
     sigs["atr"] = atr(sigs, cfg["atr_length"])
+
+    # ----- Optional Phase 10 PR 5 filters (session + regime) -----------------
+    # Both filters only mask *entries*; exits are never touched. When the
+    # config flags are False the original signal columns flow through
+    # unchanged, so the unfiltered backtest is bit-identical to PR 2.
+    if cfg.get("enable_session_filter") or cfg.get("enable_regime_filter"):
+        from .phase10_filters import (  # local import: keeps module load light
+            classify_regimes,
+            filter_signals,
+        )
+
+        regime_view = None
+        regimes_allowed = None
+        if cfg.get("enable_regime_filter"):
+            regime_view = classify_regimes(sigs, cfg.get("regime_cfg"))
+            regimes_allowed = cfg.get("regimes_allowed")
+            sigs["_regime"] = regime_view.regimes
+            sigs["_adx"] = regime_view.adx
+        session_cfg = cfg.get("session_cfg") if cfg.get(
+            "enable_session_filter"
+        ) else {"skip_friday_entries": False,
+                "skip_sunday_entries": False,
+                "skip_monday_open_entries": False}
+        sigs = filter_signals(
+            sigs,
+            sigs,
+            session_cfg=session_cfg,
+            regime_view=regime_view,
+            regimes_allowed=regimes_allowed,
+        )
 
     equity = cfg["initial_equity"]
     equity_curve: list[float] = [equity]
@@ -620,6 +659,90 @@ def run_phase10(
     return output
 
 
+def _render_compare_markdown(baseline: dict, filtered: dict,
+                             filter_cfg: dict) -> str:
+    """Render a side-by-side comparison of baseline vs filtered Phase 10.
+
+    The table shows trades / PF / max DD / net profit for every (symbol,
+    variant) pair. We never imply a filter "wins" — we just surface the
+    deltas honestly. The reader (and the Phase 10 gate) decides.
+    """
+    lines: list[str] = [
+        "# Phase 10 — Filter Comparison",
+        "",
+        "Side-by-side comparison of baseline (no filters) vs filtered "
+        "backtests. Both runs use the **same non-optimized** variant"
+        " parameters; the only difference is the entry filter layer.",
+        "",
+        "## Filter configuration (filtered run)",
+        "",
+        f"- Session filter: enabled (skip Friday & Sunday entries)",
+        f"- Regime filter:  enabled, regimes allowed = "
+        f"`{filter_cfg.get('regimes_allowed')}`",
+        "",
+        "## Per-variant metrics (in-sample)",
+        "",
+        "| Symbol | Variant | Metric | Baseline | Filtered | Δ |",
+        "|---|---|---|---:|---:|---:|",
+    ]
+
+    symbols = baseline.get("symbols", [])
+    variants = baseline.get("variants", [])
+    for symbol in symbols:
+        b_sym = baseline.get("results", {}).get(symbol, {})
+        f_sym = filtered.get("results", {}).get(symbol, {})
+        for variant in variants:
+            b = (b_sym.get(variant) or {}).get("in_sample", {})
+            f = (f_sym.get(variant) or {}).get("in_sample", {})
+            if not b and not f:
+                continue
+            for metric, fmt in (
+                ("trades", "{:.0f}"),
+                ("profit_factor", "{:.2f}"),
+                ("max_drawdown_pct", "{:.1f}"),
+                ("sharpe", "{:.2f}"),
+                ("net_profit", "{:.0f}"),
+            ):
+                bv = b.get(metric, 0.0) or 0.0
+                fv = f.get(metric, 0.0) or 0.0
+                delta = fv - bv
+                lines.append(
+                    f"| {symbol} | {variant} | {metric} | "
+                    f"{fmt.format(bv)} | {fmt.format(fv)} | "
+                    f"{fmt.format(delta)} |"
+                )
+
+    lines += [
+        "",
+        "## Gate status",
+        "",
+        "| Symbol | Variant | Baseline gate | Filtered gate |",
+        "|---|---|---|---|",
+    ]
+    for symbol in symbols:
+        for variant in variants:
+            b_gate = ((baseline.get("gates", {}).get(symbol) or {})
+                      .get(variant) or {})
+            f_gate = ((filtered.get("gates", {}).get(symbol) or {})
+                      .get(variant) or {})
+            lines.append(
+                f"| {symbol} | {variant} | "
+                f"{b_gate.get('status', '?')} | "
+                f"{f_gate.get('status', '?')} |"
+            )
+
+    lines += [
+        "",
+        "## Safety",
+        "",
+        "Every variant on every symbol — in both runs — still recommends "
+        "`BACKTEST_ONLY`. Filters are an entry mask; they do not unlock "
+        "any live-trading flag. See [SAFETY.md](../SAFETY.md).",
+        "",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def render_verdict_markdown(report: dict, repo_root: Path) -> str:
     cfg = report["config"]
     lines = [
@@ -725,7 +848,30 @@ def main(argv: list[str] | None = None) -> int:
                         default=list(PRIMARY_SYMBOLS) + list(CONTROL_SYMBOLS))
     parser.add_argument("--output", default="reports/phase10_verdict.md")
     parser.add_argument("--json-output", default="reports/phase10_verdict.json")
+    parser.add_argument(
+        "--filters", choices=["off", "session", "regime", "both"],
+        default="off",
+        help="Apply Phase 10 PR 5 filters. 'off' reproduces the PR 2 baseline.",
+    )
+    parser.add_argument(
+        "--regimes-allowed", nargs="+", default=None,
+        help="Whitelist of regimes (trending/ranging/choppy). "
+             "Default: all except 'unknown'.",
+    )
+    parser.add_argument(
+        "--compare", action="store_true",
+        help="Run BOTH baseline and filtered variants; write a side-by-side "
+             "comparison report to reports/phase10_filter_compare.md.",
+    )
     args = parser.parse_args(argv)
+
+    cfg_override: dict = {}
+    if args.filters in ("session", "both"):
+        cfg_override["enable_session_filter"] = True
+    if args.filters in ("regime", "both"):
+        cfg_override["enable_regime_filter"] = True
+    if args.regimes_allowed:
+        cfg_override["regimes_allowed"] = args.regimes_allowed
 
     repo_root = Path(__file__).resolve().parent.parent
     data_dir = repo_root / args.data_dir
@@ -763,7 +909,7 @@ def main(argv: list[str] | None = None) -> int:
         json_path.write_text(json.dumps(placeholder, default=str, indent=2))
         return 0
 
-    report = run_phase10(data_by_symbol)
+    report = run_phase10(data_by_symbol, cfg=cfg_override or None)
     out_path = repo_root / args.output
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(render_verdict_markdown(report, repo_root))
@@ -771,6 +917,22 @@ def main(argv: list[str] | None = None) -> int:
     json_path.write_text(json.dumps(report, default=str, indent=2))
     print(f"[phase10] Wrote {out_path}")
     print(f"[phase10] Wrote {json_path}")
+
+    if args.compare:
+        baseline_report = run_phase10(data_by_symbol, cfg=None)
+        filtered_cfg = {
+            "enable_session_filter": True,
+            "enable_regime_filter": True,
+            "regimes_allowed": args.regimes_allowed or ["trending"],
+        }
+        filtered_report = run_phase10(data_by_symbol, cfg=filtered_cfg)
+        compare_md = _render_compare_markdown(
+            baseline_report, filtered_report, filtered_cfg
+        )
+        compare_path = repo_root / "reports" / "phase10_filter_compare.md"
+        compare_path.parent.mkdir(parents=True, exist_ok=True)
+        compare_path.write_text(compare_md)
+        print(f"[phase10] Wrote {compare_path}")
     return 0
 
 

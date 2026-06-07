@@ -1504,6 +1504,13 @@
     "oos_fraction": 0.2,
     "wf_windows": 3,
     "stress_fee_multiplier": 2.0,
-    "stress_slippage_multiplier": 2.0
+    "stress_slippage_multiplier": 2.0,
+    "enable_session_filter": false,
+    "enable_regime_filter": false,
+    "session_cfg": null,
+    "regime_cfg": null,
+    "regimes_allowed": [
+      "trending"
+    ]
   }
 }
