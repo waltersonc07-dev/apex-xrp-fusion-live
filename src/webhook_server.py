@@ -5,15 +5,57 @@ from pathlib import Path
 
 import yaml
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Header, HTTPException, Request
 
 from .exchange_client import ExchangeClient
 from .fundamental_gate import load_daily_score
 from .journal import write_journal
 from .risk_engine import approve_trade
+from .status_endpoint import (
+    UnsafeConfigError,
+    compute_status_from_disk,
+    preflight,
+    load_settings_text,
+)
 
 load_dotenv()
-app = FastAPI(title="APEX XRP Fusion Live")
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Refuse to come up if the env+yaml combination is unsafe.
+
+    On a normal deployment this is a no-op: LIVE_TRADING/MICRO_LIVE/FULL_LIVE
+    are all false and risk.mode is BACKTEST_ONLY. The check exists so a
+    misconfigured Render redeploy (e.g. someone flips LIVE_TRADING=true
+    without updating settings.yaml and approving FULL_LIVE) fails fast at
+    startup instead of silently accepting webhooks.
+    """
+    try:
+        preflight(env=os.environ, config_yaml_text=load_settings_text())
+    except UnsafeConfigError as exc:
+        print(f"[preflight] REFUSING TO START: {exc}", flush=True)
+        raise
+    yield
+
+
+app = FastAPI(title="APEX XRP Fusion Live", lifespan=_lifespan)
+
+
+@app.get("/health")
+def health() -> dict:
+    """Lightweight liveness probe. Always returns 200 once the app booted."""
+    return {"status": "ok"}
+
+
+@app.get("/status")
+def status() -> dict:
+    """Full config integrity report. Read-only; safe to expose publicly
+    because it never returns secret values, only booleans for whether each
+    expected secret env var is set."""
+    return compute_status_from_disk().to_dict()
 
 
 def load_config(path: str | Path = "config/settings.yaml") -> dict:

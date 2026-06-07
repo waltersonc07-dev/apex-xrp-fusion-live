@@ -1,8 +1,25 @@
+# Render deployment for the APEX webhook server.
+#
+# Safety:
+#   - LIVE_TRADING/MICRO_LIVE/FULL_LIVE are pinned to "false".
+#   - RISK_MODE is pinned to "BACKTEST_ONLY".
+#   - The webhook server's preflight (src/status_endpoint.py) will refuse to
+#     start if these are ever flipped without an explicit settings.yaml
+#     full_live_approved=true. See /status for the live integrity report.
+#
+# Persistent disk:
+#   - Free tier does NOT support persistent disks. Journals on free tier are
+#     ephemeral (lost on container restart). The `disk` block below is
+#     commented out for that reason; uncomment after upgrading to Starter or
+#     higher and the journal writer will automatically use it via the
+#     APEX_JOURNAL_DIR env var.
+
 services:
   - type: web
     name: apex-xrp-fusion-live
     env: python
     plan: free
+    healthCheckPath: /health
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn src.webhook_server:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -14,10 +31,18 @@ services:
         value: "false"
       - key: RISK_MODE
         value: "BACKTEST_ONLY"
+      - key: APEX_JOURNAL_DIR
+        value: "journals"
       - key: TRADINGVIEW_WEBHOOK_SECRET
         sync: false
       - key: BINGX_API_KEY
         sync: false
       - key: BINGX_API_SECRET
         sync: false
+    # disk:
+    #   name: apex-journals
+    #   mountPath: /var/data/apex
+    #   sizeGB: 1
+    # When the disk is enabled, also flip APEX_JOURNAL_DIR above to
+    # "/var/data/apex/journals" so write_journal persists across deploys.
 

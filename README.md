@@ -156,6 +156,36 @@ The downloader is read-only data ingestion. It never references
 `LIVE_TRADING`, `MICRO_LIVE`, `FULL_LIVE`, API keys, or the XRP strategy.
 See [SAFETY.md](SAFETY.md).
 
+## Render reliability
+
+The webhook server (`src/webhook_server.py`) exposes two read-only routes:
+
+- `GET /health` — lightweight liveness probe (returns `{"status": "ok"}`).
+  Used by Render's `healthCheckPath`.
+- `GET /status` — full config integrity report. Returns the parsed env +
+  YAML state along with any `failures` / `warnings`. Never returns secret
+  values — only booleans for whether each secret env var is set.
+
+At startup, the service runs a **preflight check** (`src/status_endpoint.py`).
+It refuses to come up if any of the following is true:
+
+- `LIVE_TRADING=true` while `RISK_MODE != BACKTEST_ONLY` and
+  `risk.full_live_approved` in `settings.yaml` is not `true`
+- `FULL_LIVE=true` without `risk.full_live_approved=true`
+- env `RISK_MODE` disagrees with YAML `risk.mode`
+
+This is **Layer 4** of the safety stack — a runtime check on top of the
+three-layer lock documented in [SAFETY.md](SAFETY.md). On the current
+configuration (all live flags `false`, `risk.mode=BACKTEST_ONLY`, no full-live
+approval) preflight is a no-op.
+
+### Persistent journal disk
+
+The journal writer honors `APEX_JOURNAL_DIR` (default: `journals/`). On
+Render's free tier journals are ephemeral; the `disk` block in `render.yaml`
+is commented out because free plans do not support disks. When you upgrade,
+uncomment the disk block and flip `APEX_JOURNAL_DIR` to the mount path.
+
 ## Run Core Diagnostic
 
 Run the expanded 9-row strategy diagnostic leaderboard:
