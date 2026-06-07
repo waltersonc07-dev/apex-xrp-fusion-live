@@ -1,34 +1,31 @@
 """
-Phase 11 — Grid search engine (PR 2 of N).
+Phase 11 — Grid search engine + per-symbol acceptance gate (PR 2 + PR 3).
 
 Walks the frozen parameter grid (``src.phase11_grid``) through the
 walk-forward orchestrator (``src.phase11_orchestrator``) and writes one
 row per (variant, params, symbol) combination to a CSV plus a Markdown
 summary.
 
-PR 2 deliberately ships WITHOUT:
+PR 2 contributed:
+  * Per-combo run of the orchestrator across all symbols.
+  * Locked CSV schema (`combo_key` ... `min_fold_oos_trades`).
+  * Markdown summary with informational top-10 rankings.
 
-  * raw + Bonferroni p-value columns      (deferred to phase11/pr3 — needs
-                                           an explicit null and a p-value
-                                           estimator)
-  * primary/control portfolio aggregation (deferred to phase11/pr4)
-  * acceptance gate (Amendment A § A.5)   (deferred to phase11/pr3)
+PR 3 contributes (this revision):
+  * Per-symbol acceptance gate via ``src.phase11_gate``.
+  * Appends to ``CSV_COLUMNS``: ``raw_p``, ``bonferroni_p``, ``n_tested``,
+    ``survives_raw``, ``survives_bonferroni``, ``verdict``, ``gate_reason``.
+    Existing 13 columns are untouched — the schema lock test still holds.
+  * Markdown summary now reports verdict counts and lists
+    VALIDATED_RESEARCH_CANDIDATE / MICRO_LIVE_CANDIDATE rows.
 
-What PR 2 DOES ship:
+PR 3 still defers to later PRs:
+  * Primary/control portfolio aggregation + per-pair >40% cap → PR 4.
+  * Bayesian posterior intervals                              → PR 5.
 
-  1. ``run_grid_search()`` — walks every combo through the orchestrator
-     and collects per-symbol summaries. No verdict is emitted at the
-     combo level; the verdict still comes from the orchestrator and is
-     still ``BLOCKED`` by design until PR 3.
-  2. CSV writer with a stable, documented column order. Schema is
-     locked here so PR 3 only ADDS columns (raw_p, bonferroni_p,
-     survives_*, verdict) — never reorders or renames.
-  3. CLI: ``python -m src.phase11_search --variants V0,V2 --symbols EURUSD``
-     for quick iteration. Defaults walk the full grid across all 4 symbols.
-
-The acceptance gate's ``n_tested`` count (Amendment A § A.3) will be
-sourced from the loaded ``GridSpec.total`` in PR 3 — same source of
-truth as this module's row count.
+``n_tested`` for the Bonferroni adjustment is sourced directly from
+``GridSpec.total`` so the gate's correction always matches the frozen
+grid size that produced the rows.
 """
 
 from __future__ import annotations
@@ -48,6 +45,15 @@ from .phase10_fx_gold_daily import (
     PRIMARY_SYMBOLS,
     _load_csv,
 )
+from .phase11_gate import (
+    ALL_VERDICTS,
+    GateResult,
+    VERDICT_BLOCKED,
+    VERDICT_MICRO_LIVE_CANDIDATE,
+    VERDICT_VALIDATED_RESEARCH_CANDIDATE,
+    VERDICT_WATCH,
+    evaluate_gate,
+)
 from .phase11_grid import GridSpec, load_grid, summarize as summarize_grid
 from .phase11_orchestrator import (
     DEFAULT_N_FOLDS,
@@ -57,9 +63,10 @@ from .phase11_orchestrator import (
 )
 
 
-# CSV column order is locked. PR 3 may APPEND columns
-# (raw_p, bonferroni_p, n_tested, survives_raw, survives_bonferroni, verdict)
-# but must NOT reorder or rename.
+# CSV column order is locked. PR 2 froze the first 13 columns; PR 3
+# APPENDS gate columns (raw_p ... gate_reason) per the contract in
+# ``tests/test_phase11_search.py::test_csv_columns_constant_is_locked``.
+# Future PRs may also append but must NEVER reorder or rename anything.
 CSV_COLUMNS: tuple[str, ...] = (
     "combo_key",
     "variant",
@@ -74,8 +81,14 @@ CSV_COLUMNS: tuple[str, ...] = (
     "max_is_to_oos_sharpe_degradation_pct",
     "total_oos_trades",
     "min_fold_oos_trades",
-    # ---- columns reserved for PR 3 (must stay at the end) ---------------
-    # raw_p, bonferroni_p, n_tested, survives_raw, survives_bonferroni, verdict
+    # ---- PR 3: acceptance gate columns ----------------------------------
+    "raw_p",
+    "bonferroni_p",
+    "n_tested",
+    "survives_raw",
+    "survives_bonferroni",
+    "verdict",
+    "gate_reason",
 )
 
 
@@ -88,10 +101,12 @@ class SearchRow:
     status: str                        # "OK" or "INSUFFICIENT_DATA"
     n_folds: int
     summary: dict                      # full per-symbol summary dict from orchestrator
+    folds: tuple = ()                  # per-fold payloads (dicts) for the gate's p-value
+    gate: GateResult | None = None     # populated by attach_gate_results()
 
     def to_csv_row(self) -> dict:
         s = self.summary or {}
-        return {
+        row = {
             "combo_key": self.combo_key,
             "variant": self.variant,
             "params_json": json.dumps(self.params, sort_keys=True),
@@ -107,6 +122,26 @@ class SearchRow:
             "total_oos_trades": _intfmt(s.get("total_oos_trades")),
             "min_fold_oos_trades": _intfmt(s.get("min_fold_oos_trades")),
         }
+        # PR 3 gate columns. Empty if attach_gate_results hasn't run.
+        g = self.gate
+        if g is None:
+            row.update({
+                "raw_p": "", "bonferroni_p": "", "n_tested": "",
+                "survives_raw": "", "survives_bonferroni": "",
+                "verdict": "", "gate_reason": "",
+            })
+        else:
+            row.update({
+                "raw_p": _fmt(g.raw_p),
+                "bonferroni_p": _fmt(g.bonferroni_p),
+                "n_tested": str(int(g.n_tested)),
+                "survives_raw": "true" if g.survives_raw else "false",
+                "survives_bonferroni":
+                    "true" if g.survives_bonferroni else "false",
+                "verdict": g.verdict,
+                "gate_reason": g.reason,
+            })
+        return row
 
 
 def _fmt(v) -> str:
@@ -177,6 +212,7 @@ def run_grid_search(
                     status=payload.get("status", "ERROR"),
                     n_folds=splitter.n_folds,
                     summary={},
+                    folds=(),
                 ))
                 continue
             rows.append(SearchRow(
@@ -187,8 +223,55 @@ def run_grid_search(
                 status="OK",
                 n_folds=splitter.n_folds,
                 summary=payload["summary"],
+                folds=tuple(_fold_payload(f) for f in payload.get("folds", [])),
             ))
     return rows
+
+
+def _fold_payload(f) -> dict:
+    """Coerce an orchestrator FoldResult into a plain dict for the gate."""
+    if isinstance(f, dict):
+        return f
+    return {
+        "oos_pf": getattr(f, "oos_pf", None),
+        "oos_sharpe": getattr(f, "oos_sharpe", None),
+        "oos_trades": getattr(f, "oos_trades", None),
+        "oos_max_dd_pct": getattr(f, "oos_max_dd_pct", None),
+        "is_to_oos_sharpe_degradation_pct":
+            getattr(f, "is_to_oos_sharpe_degradation_pct", None),
+        "oos_metrics": dict(getattr(f, "oos_metrics", {}) or {}),
+    }
+
+
+def attach_gate_results(
+    rows: list[SearchRow], n_tested: int,
+) -> list[SearchRow]:
+    """Run the PR 3 acceptance gate against each row.
+
+    Returns a NEW list of rows with ``gate`` populated. ``n_tested`` is
+    used as the Bonferroni multiplier. Pass ``grid.total`` from the same
+    grid that produced these rows.
+    """
+    out: list[SearchRow] = []
+    for r in rows:
+        gate = evaluate_gate(
+            status=r.status,
+            summary=r.summary,
+            folds=list(r.folds),
+            n_tested=n_tested,
+        )
+        out.append(SearchRow(
+            combo_key=r.combo_key,
+            variant=r.variant,
+            params=dict(r.params),
+            symbol=r.symbol,
+            status=r.status,
+            n_folds=r.n_folds,
+            summary=dict(r.summary or {}),
+            folds=r.folds,
+            gate=gate,
+        ))
+    return out
 
 
 def write_csv(rows: list[SearchRow], path: Path) -> None:
@@ -204,6 +287,12 @@ def render_summary_markdown(
     rows: list[SearchRow], grid: GridSpec, csv_path: Path | None = None,
 ) -> str:
     """Render a human-readable summary of the grid-search run."""
+    # Verdict counts — only meaningful once attach_gate_results has run.
+    verdict_counts: dict[str, int] = {v: 0 for v in ALL_VERDICTS}
+    gated_rows: list[SearchRow] = [r for r in rows if r.gate is not None]
+    for r in gated_rows:
+        verdict_counts[r.gate.verdict] = verdict_counts.get(r.gate.verdict, 0) + 1
+
     lines: list[str] = [
         "# Phase 11 — Grid Search Summary (PR 2)",
         "",
@@ -223,12 +312,65 @@ def render_summary_markdown(
         "This report cannot toggle any live-trading flag."
     )
     lines.append("")
-    lines.append(
-        "> Acceptance gate, raw + Bonferroni p-value columns, and the "
-        "primary/control portfolio split land in phase11/pr3 and "
-        "phase11/pr4. PR 2 emits raw per-symbol metrics only."
-    )
+    if gated_rows:
+        lines.append(
+            "> Per-symbol acceptance gate is active (PR 3). The portfolio "
+            "aggregation + per-pair >40% cap lands in PR 4; even the "
+            "highest verdict label remains research-only."
+        )
+    else:
+        lines.append(
+            "> Acceptance gate has NOT been applied to these rows. Call "
+            "``attach_gate_results(rows, grid.total)`` before rendering for "
+            "verdict columns to be meaningful."
+        )
     lines.append("")
+    if gated_rows:
+        lines.append("## Verdict counts")
+        lines.append("")
+        for v in ALL_VERDICTS:
+            lines.append(f"- `{v}`: {verdict_counts.get(v, 0)} row(s)")
+        lines.append("")
+
+        candidates = [
+            r for r in gated_rows
+            if r.gate.verdict in (
+                VERDICT_VALIDATED_RESEARCH_CANDIDATE,
+                VERDICT_MICRO_LIVE_CANDIDATE,
+            )
+        ]
+        if candidates:
+            lines.append("## Candidates surfaced by the gate")
+            lines.append("")
+            lines.append(
+                "| Variant | Symbol | Params | Verdict | Median OOS PF | "
+                "Worst-fold OOS PF | bonferroni_p |"
+            )
+            lines.append(
+                "|---------|--------|--------|---------|--------------:|"
+                "------------------:|-------------:|"
+            )
+            for r in candidates:
+                s = r.summary
+                g = r.gate
+                params_str = ", ".join(
+                    f"`{k}={v}`" for k, v in sorted(r.params.items())
+                )
+                lines.append(
+                    f"| {r.variant} | {r.symbol} | {params_str} | "
+                    f"{g.verdict} | "
+                    f"{float(s.get('median_oos_pf', 0)):.3f} | "
+                    f"{float(s.get('worst_fold_oos_pf', 0)):.3f} | "
+                    f"{g.bonferroni_p:.4f} |"
+                )
+            lines.append("")
+        else:
+            lines.append(
+                "_No VALIDATED_RESEARCH_CANDIDATE or MICRO_LIVE_CANDIDATE "
+                "rows in this run. All OK rows are BLOCKED or WATCH._"
+            )
+            lines.append("")
+
     lines.append("## Skip / data-availability summary")
     lines.append("")
     by_status: dict[str, int] = {}
@@ -360,6 +502,7 @@ def main(argv: list[str] | None = None) -> int:
     rows = run_grid_search(
         by_symbol, grid, splitter=splitter, variant_filter=variant_filter
     )
+    rows = attach_gate_results(rows, n_tested=grid.total)
     csv_path = Path(args.output_csv)
     write_csv(rows, csv_path)
     md_path = Path(args.output_md)
