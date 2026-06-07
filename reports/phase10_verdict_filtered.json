@@ -1,0 +1,1539 @@
+{
+  "variants": [
+    "V0",
+    "V1",
+    "V2",
+    "V3"
+  ],
+  "symbols": [
+    "EURUSD",
+    "GBPUSD",
+    "XAUUSD",
+    "USDJPY"
+  ],
+  "results": {
+    "EURUSD": {
+      "V0": {
+        "in_sample": {
+          "trades": 4,
+          "win_rate": 75.0,
+          "profit_factor": 1.8204047860344934,
+          "net_profit": 31.139510380064724,
+          "strategy_return_pct": 0.31139510380064905,
+          "max_drawdown_pct": 0.3795627586545561,
+          "expectancy": 7.784877595016181,
+          "sharpe": 3.34913719930735,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "out_of_sample": {
+          "trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": 0.0,
+          "max_drawdown_pct": 0.0,
+          "expectancy": 0.0,
+          "sharpe": 0.0,
+          "buy_and_hold_return_pct": 6.386163278134815,
+          "strategy_return_pct": 0.0,
+          "stop_loss_exits": 0,
+          "losing_trades": 0
+        },
+        "stress_2x_fees": {
+          "trades": 4,
+          "win_rate": 75.0,
+          "profit_factor": 1.7470919567600338,
+          "net_profit": 28.80806778907111,
+          "strategy_return_pct": 0.288080677890723,
+          "max_drawdown_pct": 0.3856027029658435,
+          "expectancy": 7.2020169472677775,
+          "sharpe": 3.0983353627850088,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "stress_2x_slip": {
+          "trades": 4,
+          "win_rate": 75.0,
+          "profit_factor": 1.7834576914730107,
+          "net_profit": 29.973738307799714,
+          "strategy_return_pct": 0.29973738307798037,
+          "max_drawdown_pct": 0.3825827308101907,
+          "expectancy": 7.493434576949928,
+          "sharpe": 3.2236958617382605,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 2,
+            "profit_factor": 0.2813701845166547,
+            "max_drawdown_pct": 0.3795627586545561,
+            "net_profit": -27.276511521626794,
+            "sharpe": -6.280646256504359
+          },
+          {
+            "window": 2,
+            "trades": 2,
+            "profit_factor": Infinity,
+            "max_drawdown_pct": 0.0,
+            "net_profit": 89.41185158942535,
+            "sharpe": 12.888201768500673
+          },
+          {
+            "window": 3,
+            "trades": 1,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 0.16134186654760924,
+            "net_profit": -16.134186654760722,
+            "sharpe": 0.0
+          }
+        ]
+      },
+      "V1": {
+        "in_sample": {
+          "trades": 5,
+          "win_rate": 60.0,
+          "profit_factor": 1.6699865834142267,
+          "net_profit": 27.713515215056983,
+          "strategy_return_pct": 0.27713515215055384,
+          "max_drawdown_pct": 0.3795627586545561,
+          "expectancy": 5.542703043011397,
+          "sharpe": 2.7231769870491926,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 2
+        },
+        "out_of_sample": {
+          "trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": 0.0,
+          "max_drawdown_pct": 0.0,
+          "expectancy": 0.0,
+          "sharpe": 0.0,
+          "buy_and_hold_return_pct": 6.386163278134815,
+          "strategy_return_pct": 0.0,
+          "stop_loss_exits": 0,
+          "losing_trades": 0
+        },
+        "stress_2x_fees": {
+          "trades": 5,
+          "win_rate": 60.0,
+          "profit_factor": 1.588654973804832,
+          "net_profit": 24.955023262555606,
+          "strategy_return_pct": 0.24955023262556164,
+          "max_drawdown_pct": 0.3856027029658435,
+          "expectancy": 4.991004652511121,
+          "sharpe": 2.4537143676533586,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 2
+        },
+        "stress_2x_slip": {
+          "trades": 5,
+          "win_rate": 60.0,
+          "profit_factor": 1.6288190855967777,
+          "net_profit": 26.334193614658595,
+          "strategy_return_pct": 0.2633419361465661,
+          "max_drawdown_pct": 0.3825827308101907,
+          "expectancy": 5.266838722931719,
+          "sharpe": 2.588426854559737,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 2
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 2,
+            "profit_factor": 0.2813701845166547,
+            "max_drawdown_pct": 0.3795627586545561,
+            "net_profit": -27.276511521626794,
+            "sharpe": -6.280646256504359
+          },
+          {
+            "window": 2,
+            "trades": 3,
+            "profit_factor": 26.15588856119426,
+            "max_drawdown_pct": 0.03415359901497639,
+            "net_profit": 85.96595432266432,
+            "sharpe": 9.513099742745698
+          },
+          {
+            "window": 3,
+            "trades": 2,
+            "profit_factor": 7.402929617732185,
+            "max_drawdown_pct": 0.16134186654760924,
+            "net_profit": 103.30606158978678,
+            "sharpe": 8.557089815418832
+          }
+        ]
+      },
+      "V2": {
+        "in_sample": {
+          "trades": 9,
+          "win_rate": 22.22222222222222,
+          "profit_factor": 0.7950923076270567,
+          "net_profit": -50.28097968126355,
+          "strategy_return_pct": -0.502809796812631,
+          "max_drawdown_pct": 1.8253315527183482,
+          "expectancy": -5.586775520140395,
+          "sharpe": -1.3788562238592688,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 4,
+          "losing_trades": 7
+        },
+        "out_of_sample": {
+          "trades": 1,
+          "win_rate": 100.0,
+          "profit_factor": Infinity,
+          "net_profit": 12.320460776330597,
+          "strategy_return_pct": 0.12320460776331643,
+          "max_drawdown_pct": 0.0,
+          "expectancy": 12.320460776330597,
+          "sharpe": 0.0,
+          "buy_and_hold_return_pct": 6.386163278134815,
+          "stop_loss_exits": 0,
+          "losing_trades": 0
+        },
+        "stress_2x_fees": {
+          "trades": 9,
+          "win_rate": 22.22222222222222,
+          "profit_factor": 0.776024100825161,
+          "net_profit": -55.93941896814981,
+          "strategy_return_pct": -0.5593941896814947,
+          "max_drawdown_pct": 1.8577722002893573,
+          "expectancy": -6.21549099646109,
+          "sharpe": -1.5389062310826087,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 4,
+          "losing_trades": 7
+        },
+        "stress_2x_slip": {
+          "trades": 9,
+          "win_rate": 22.22222222222222,
+          "profit_factor": 0.7854728488280259,
+          "net_profit": -53.11055546411022,
+          "strategy_return_pct": -0.5311055546411092,
+          "max_drawdown_pct": 1.8415529354538476,
+          "expectancy": -5.90117282934558,
+          "sharpe": -1.4588931683375952,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 4,
+          "losing_trades": 7
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 2,
+            "profit_factor": 13.896697958260933,
+            "max_drawdown_pct": 0.0887783396574462,
+            "net_profit": 115.92493902812923,
+            "sharpe": 9.735289531825105
+          },
+          {
+            "window": 2,
+            "trades": 2,
+            "profit_factor": 0.8442871549220841,
+            "max_drawdown_pct": 0.5134685346425067,
+            "net_profit": -7.99536463871727,
+            "sharpe": -0.9190296502871752
+          },
+          {
+            "window": 3,
+            "trades": 3,
+            "profit_factor": 0.11954650121464633,
+            "max_drawdown_pct": 1.0200868548614017,
+            "net_profit": -89.81390404276713,
+            "sharpe": -12.991768859920144
+          }
+        ]
+      },
+      "V3": {
+        "in_sample": {
+          "trades": 11,
+          "win_rate": 18.181818181818183,
+          "profit_factor": 1.5786027360747619,
+          "net_profit": 79.61672287705258,
+          "strategy_return_pct": 0.7961672287705168,
+          "max_drawdown_pct": 1.0554735639718105,
+          "expectancy": 7.237883897913871,
+          "sharpe": 2.254915689481517,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 9
+        },
+        "out_of_sample": {
+          "trades": 2,
+          "win_rate": 50.0,
+          "profit_factor": 1.6662547736404851,
+          "net_profit": 21.236306966100695,
+          "strategy_return_pct": 0.2123630696610146,
+          "max_drawdown_pct": 0.3170576279515969,
+          "expectancy": 10.618153483050348,
+          "sharpe": 2.832796919434354,
+          "buy_and_hold_return_pct": 6.386163278134815,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "stress_2x_fees": {
+          "trades": 11,
+          "win_rate": 18.181818181818183,
+          "profit_factor": 1.503988221751814,
+          "net_profit": 72.3385553789216,
+          "strategy_return_pct": 0.7233855537892353,
+          "max_drawdown_pct": 1.083331504208197,
+          "expectancy": 6.576232307174691,
+          "sharpe": 2.05211322662283,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 9
+        },
+        "stress_2x_slip": {
+          "trades": 11,
+          "win_rate": 18.181818181818183,
+          "profit_factor": 1.5405021787049398,
+          "net_profit": 75.9770440582139,
+          "strategy_return_pct": 0.7597704405821526,
+          "max_drawdown_pct": 1.0694032617218272,
+          "expectancy": 6.9070040052921735,
+          "sharpe": 2.15349780012832,
+          "buy_and_hold_return_pct": -3.1087618186389165,
+          "stop_loss_exits": 0,
+          "losing_trades": 9
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 4,
+            "profit_factor": 2.9377760474341894,
+            "max_drawdown_pct": 0.38325877173036343,
+            "net_profit": 75.11268182924454,
+            "sharpe": 4.7100256017852296
+          },
+          {
+            "window": 2,
+            "trades": 4,
+            "profit_factor": 2.496796290922515,
+            "max_drawdown_pct": 0.09936081252013536,
+            "net_profit": 14.872289564318379,
+            "sharpe": 4.184021487001368
+          },
+          {
+            "window": 3,
+            "trades": 5,
+            "profit_factor": 1.6199822306774068,
+            "max_drawdown_pct": 0.31705762848596786,
+            "net_profit": 47.158204070411884,
+            "sharpe": 3.1093000295814095
+          }
+        ]
+      }
+    },
+    "GBPUSD": {
+      "V0": {
+        "in_sample": {
+          "trades": 3,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.8494136253866856,
+          "net_profit": -1.9460606921743393,
+          "strategy_return_pct": -0.019460606921750667,
+          "max_drawdown_pct": 0.10881038129777153,
+          "expectancy": -0.6486868973914465,
+          "sharpe": -0.9302266516323552,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 0,
+          "losing_trades": 2
+        },
+        "out_of_sample": {
+          "trades": 3,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.7183485699172865,
+          "net_profit": -14.093380021389535,
+          "strategy_return_pct": -0.1409338002138938,
+          "max_drawdown_pct": 0.49859156793337467,
+          "expectancy": -4.697793340463178,
+          "sharpe": -1.8869756370053026,
+          "buy_and_hold_return_pct": 4.766734812096707,
+          "stop_loss_exits": 0,
+          "losing_trades": 2
+        },
+        "stress_2x_fees": {
+          "trades": 3,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.74433179749491,
+          "net_profit": -3.5779347843232703,
+          "strategy_return_pct": -0.035779347843234444,
+          "max_drawdown_pct": 0.11328962338526254,
+          "expectancy": -1.1926449281077567,
+          "sharpe": -1.7228544966213848,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 0,
+          "losing_trades": 2
+        },
+        "stress_2x_slip": {
+          "trades": 3,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.7947803760410629,
+          "net_profit": -2.7620197393189887,
+          "strategy_return_pct": -0.027620197393185553,
+          "max_drawdown_pct": 0.11105000234150793,
+          "expectancy": -0.9206732464396629,
+          "sharpe": -1.3256770303511825,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 0,
+          "losing_trades": 2
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 1,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 0.10881038129777153,
+            "net_profit": -10.881038129777146,
+            "sharpe": 0.0
+          },
+          {
+            "window": 2,
+            "trades": 0,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 0.0,
+            "net_profit": 0.0,
+            "sharpe": 0.0
+          },
+          {
+            "window": 3,
+            "trades": 5,
+            "profit_factor": 0.6348470939347268,
+            "max_drawdown_pct": 0.498591567933359,
+            "net_profit": -20.66133209940687,
+            "sharpe": -2.354289888718386
+          }
+        ]
+      },
+      "V1": {
+        "in_sample": {
+          "trades": 9,
+          "win_rate": 44.44444444444444,
+          "profit_factor": 1.9822817991797699,
+          "net_profit": 36.97302066485535,
+          "strategy_return_pct": 0.36973020664854417,
+          "max_drawdown_pct": 0.20425440460410502,
+          "expectancy": 4.10811340720615,
+          "sharpe": 4.097770595044379,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 0,
+          "losing_trades": 5
+        },
+        "out_of_sample": {
+          "trades": 3,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.7183485699172865,
+          "net_profit": -14.093380021389535,
+          "strategy_return_pct": -0.1409338002138938,
+          "max_drawdown_pct": 0.49859156793337467,
+          "expectancy": -4.697793340463178,
+          "sharpe": -1.8869756370053026,
+          "buy_and_hold_return_pct": 4.766734812096707,
+          "stop_loss_exits": 0,
+          "losing_trades": 2
+        },
+        "stress_2x_fees": {
+          "trades": 9,
+          "win_rate": 44.44444444444444,
+          "profit_factor": 1.824718815433415,
+          "net_profit": 32.68862585722027,
+          "strategy_return_pct": 0.3268862585721788,
+          "max_drawdown_pct": 0.22458283330338097,
+          "expectancy": 3.6320695396911415,
+          "sharpe": 3.6483461834538096,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 0,
+          "losing_trades": 5
+        },
+        "stress_2x_slip": {
+          "trades": 9,
+          "win_rate": 44.44444444444444,
+          "profit_factor": 1.9014572302223465,
+          "net_profit": 34.83062225710818,
+          "strategy_return_pct": 0.3483062225710931,
+          "max_drawdown_pct": 0.21441901928510165,
+          "expectancy": 3.870069139678687,
+          "sharpe": 3.8738097482741707,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 0,
+          "losing_trades": 5
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 3,
+            "profit_factor": 5.2712608025395395,
+            "max_drawdown_pct": 0.10881038129777153,
+            "net_profit": 46.47575165465527,
+            "sharpe": 10.49744373079683
+          },
+          {
+            "window": 2,
+            "trades": 4,
+            "profit_factor": 0.2515696496735627,
+            "max_drawdown_pct": 0.18387034183913784,
+            "net_profit": -18.387034183915063,
+            "sharpe": -10.088093530385883
+          },
+          {
+            "window": 3,
+            "trades": 6,
+            "profit_factor": 0.5795141706323158,
+            "max_drawdown_pct": 0.49859156793335657,
+            "net_profit": -26.049862096533637,
+            "sharpe": -2.7699017426652395
+          }
+        ]
+      },
+      "V2": {
+        "in_sample": {
+          "trades": 7,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": -281.8529651886854,
+          "strategy_return_pct": -2.818529651886892,
+          "max_drawdown_pct": 2.8185296518868928,
+          "expectancy": -40.264709312669346,
+          "sharpe": -35.244056038185036,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 5,
+          "losing_trades": 7
+        },
+        "out_of_sample": {
+          "trades": 3,
+          "win_rate": 66.66666666666666,
+          "profit_factor": 0.3287639235181393,
+          "net_profit": -34.18197133229761,
+          "strategy_return_pct": -0.3418197133229661,
+          "max_drawdown_pct": 0.5083880455950306,
+          "expectancy": -11.393990444099202,
+          "sharpe": -5.2208916815535344,
+          "buy_and_hold_return_pct": 4.766734812096707,
+          "stop_loss_exits": 1,
+          "losing_trades": 1
+        },
+        "stress_2x_fees": {
+          "trades": 7,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": -286.21667130064316,
+          "strategy_return_pct": -2.862166713006431,
+          "max_drawdown_pct": 2.862166713006427,
+          "expectancy": -40.888095900091876,
+          "sharpe": -35.769671127710524,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 5,
+          "losing_trades": 7
+        },
+        "stress_2x_slip": {
+          "trades": 7,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": -284.035027446372,
+          "strategy_return_pct": -2.84035027446371,
+          "max_drawdown_pct": 2.840350274463708,
+          "expectancy": -40.57643249233886,
+          "sharpe": -35.50710013611719,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 5,
+          "losing_trades": 7
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 3,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 1.068233096522199,
+            "net_profit": -106.82330965221811,
+            "sharpe": -21.627092626519353
+          },
+          {
+            "window": 2,
+            "trades": 2,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 0.7594173370345743,
+            "net_profit": -75.94173370345793,
+            "sharpe": -32.49138058768554
+          },
+          {
+            "window": 3,
+            "trades": 5,
+            "profit_factor": 0.1081544703184752,
+            "max_drawdown_pct": 1.5243695486536673,
+            "net_profit": -135.95021675494093,
+            "sharpe": -13.228133643859326
+          }
+        ]
+      },
+      "V3": {
+        "in_sample": {
+          "trades": 11,
+          "win_rate": 18.181818181818183,
+          "profit_factor": 0.10138087183160623,
+          "net_profit": -277.23138565083127,
+          "strategy_return_pct": -2.772313856508335,
+          "max_drawdown_pct": 2.9732239064130246,
+          "expectancy": -25.202853240984663,
+          "sharpe": -15.93989286132821,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 4,
+          "losing_trades": 9
+        },
+        "out_of_sample": {
+          "trades": 7,
+          "win_rate": 28.57142857142857,
+          "profit_factor": 0.34057885451898445,
+          "net_profit": -95.60942631064444,
+          "strategy_return_pct": -0.956094263106444,
+          "max_drawdown_pct": 1.184495594718028,
+          "expectancy": -13.658489472949205,
+          "sharpe": -7.230970805930533,
+          "buy_and_hold_return_pct": 4.766734812096707,
+          "stop_loss_exits": 1,
+          "losing_trades": 5
+        },
+        "stress_2x_fees": {
+          "trades": 11,
+          "win_rate": 18.181818181818183,
+          "profit_factor": 0.09534373647714398,
+          "net_profit": -283.8646793113232,
+          "strategy_return_pct": -2.8386467931131976,
+          "max_drawdown_pct": 3.0329811775750946,
+          "expectancy": -25.805879937393016,
+          "sharpe": -16.33934326137437,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 4,
+          "losing_trades": 9
+        },
+        "stress_2x_slip": {
+          "trades": 11,
+          "win_rate": 18.181818181818183,
+          "profit_factor": 0.09833630840170822,
+          "net_profit": -280.54854610288476,
+          "strategy_return_pct": -2.805485461028856,
+          "max_drawdown_pct": 3.003106675767441,
+          "expectancy": -25.50441328208043,
+          "sharpe": -16.13956131446312,
+          "buy_and_hold_return_pct": -13.235878320561433,
+          "stop_loss_exits": 4,
+          "losing_trades": 9
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 5,
+            "profit_factor": 0.1350859141408814,
+            "max_drawdown_pct": 1.529683721607073,
+            "net_profit": -132.57845820691196,
+            "sharpe": -14.33572760161548
+          },
+          {
+            "window": 2,
+            "trades": 4,
+            "profit_factor": 0.09637275706684716,
+            "max_drawdown_pct": 1.0145201197587086,
+            "net_profit": -100.75003066283227,
+            "sharpe": -13.018685853313208
+          },
+          {
+            "window": 3,
+            "trades": 11,
+            "profit_factor": 0.17898161659114067,
+            "max_drawdown_pct": 2.461346258458434,
+            "net_profit": -223.5896228807281,
+            "sharpe": -11.735305223535669
+          }
+        ]
+      }
+    },
+    "XAUUSD": {
+      "V0": {
+        "in_sample": {
+          "trades": 12,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.21265988339701378,
+          "net_profit": -166.85684360521216,
+          "strategy_return_pct": -1.6685684360521424,
+          "max_drawdown_pct": 1.7456902985895613,
+          "expectancy": -13.904736967101014,
+          "sharpe": -8.697224533313765,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 2,
+          "losing_trades": 8
+        },
+        "out_of_sample": {
+          "trades": 3,
+          "win_rate": 66.66666666666666,
+          "profit_factor": 2.9604872126988724,
+          "net_profit": 13.544835045600827,
+          "strategy_return_pct": 0.13544835045600223,
+          "max_drawdown_pct": 0.06894810251259165,
+          "expectancy": 4.514945015200276,
+          "sharpe": 6.183686096314119,
+          "buy_and_hold_return_pct": 85.43390780320487,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "stress_2x_fees": {
+          "trades": 12,
+          "win_rate": 25.0,
+          "profit_factor": 0.20342879313196885,
+          "net_profit": -171.17758163841214,
+          "strategy_return_pct": -1.7117758163841201,
+          "max_drawdown_pct": 1.7818663172897504,
+          "expectancy": -14.264798469867678,
+          "sharpe": -8.91789996457259,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 2,
+          "losing_trades": 9
+        },
+        "stress_2x_slip": {
+          "trades": 12,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.20792872686840133,
+          "net_profit": -169.01742775504692,
+          "strategy_return_pct": -1.6901742775504824,
+          "max_drawdown_pct": 1.7637797821642744,
+          "expectancy": -14.084785646253911,
+          "sharpe": -8.807634113453059,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 2,
+          "losing_trades": 8
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 3,
+            "profit_factor": 0.058373758020436275,
+            "max_drawdown_pct": 0.6207946860234005,
+            "net_profit": -58.45565672411008,
+            "sharpe": -12.028793324692556
+          },
+          {
+            "window": 2,
+            "trades": 4,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 0.7978467328033185,
+            "net_profit": -79.78467328033102,
+            "sharpe": -15.536430731114118
+          },
+          {
+            "window": 3,
+            "trades": 8,
+            "profit_factor": 1.6226052325493605,
+            "max_drawdown_pct": 1.0123437188219822,
+            "net_profit": 67.35558542520624,
+            "sharpe": 2.7350481873009227
+          }
+        ]
+      },
+      "V1": {
+        "in_sample": {
+          "trades": 17,
+          "win_rate": 41.17647058823529,
+          "profit_factor": 0.5275738434691241,
+          "net_profit": -120.66234011402051,
+          "strategy_return_pct": -1.2066234011402277,
+          "max_drawdown_pct": 2.147124377912314,
+          "expectancy": -7.0977847125894415,
+          "sharpe": -3.402211934294929,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 2,
+          "losing_trades": 10
+        },
+        "out_of_sample": {
+          "trades": 3,
+          "win_rate": 66.66666666666666,
+          "profit_factor": 2.9604872126988724,
+          "net_profit": 13.544835045600827,
+          "strategy_return_pct": 0.13544835045600223,
+          "max_drawdown_pct": 0.06894810251259165,
+          "expectancy": 4.514945015200276,
+          "sharpe": 6.183686096314119,
+          "buy_and_hold_return_pct": 85.43390780320487,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "stress_2x_fees": {
+          "trades": 17,
+          "win_rate": 35.294117647058826,
+          "profit_factor": 0.5082464461392787,
+          "net_profit": -127.6279107760345,
+          "strategy_return_pct": -1.2762791077603808,
+          "max_drawdown_pct": 2.2005713564411415,
+          "expectancy": -7.5075241632961465,
+          "sharpe": -3.602110522143651,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 2,
+          "losing_trades": 11
+        },
+        "stress_2x_slip": {
+          "trades": 17,
+          "win_rate": 41.17647058823529,
+          "profit_factor": 0.5177889530284826,
+          "net_profit": -124.14569897251407,
+          "strategy_return_pct": -1.241456989725176,
+          "max_drawdown_pct": 2.1738511940003447,
+          "expectancy": -7.302688174853769,
+          "sharpe": -3.5021582807813902,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 2,
+          "losing_trades": 10
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 5,
+            "profit_factor": 0.09410035526262661,
+            "max_drawdown_pct": 0.6734815668515512,
+            "net_profit": -67.34815668515523,
+            "sharpe": -10.327966437678187
+          },
+          {
+            "window": 2,
+            "trades": 7,
+            "profit_factor": 0.7823811463306332,
+            "max_drawdown_pct": 1.114702587027823,
+            "net_profit": -24.25802991712723,
+            "sharpe": -1.2312793748170228
+          },
+          {
+            "window": 3,
+            "trades": 8,
+            "profit_factor": 1.6226052325493605,
+            "max_drawdown_pct": 1.0123437188219822,
+            "net_profit": 67.35558542520624,
+            "sharpe": 2.7350481873009227
+          }
+        ]
+      },
+      "V2": {
+        "in_sample": {
+          "trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.661820071758498,
+          "net_profit": 475.09118436857904,
+          "strategy_return_pct": 4.75091184368579,
+          "max_drawdown_pct": 1.5210407320995727,
+          "expectancy": 33.93508459775565,
+          "sharpe": 6.046541740401522,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 5,
+          "losing_trades": 7
+        },
+        "out_of_sample": {
+          "trades": 2,
+          "win_rate": 50.0,
+          "profit_factor": 12.722621553546078,
+          "net_profit": 590.7808752312775,
+          "strategy_return_pct": 5.907808752312782,
+          "max_drawdown_pct": 0.5039665168177089,
+          "expectancy": 295.39043761563875,
+          "sharpe": 9.596638223627902,
+          "buy_and_hold_return_pct": 85.43390780320487,
+          "stop_loss_exits": 1,
+          "losing_trades": 1
+        },
+        "stress_2x_fees": {
+          "trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.6156867347041386,
+          "net_profit": 467.41699441887,
+          "strategy_return_pct": 4.6741699441886775,
+          "max_drawdown_pct": 1.5400565136871227,
+          "expectancy": 33.38692817277643,
+          "sharpe": 5.954021252756092,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 5,
+          "losing_trades": 7
+        },
+        "stress_2x_slip": {
+          "trades": 14,
+          "win_rate": 50.0,
+          "profit_factor": 2.638613140034845,
+          "net_profit": 471.2534405506724,
+          "strategy_return_pct": 4.7125344055066964,
+          "max_drawdown_pct": 1.530548926861702,
+          "expectancy": 33.660960039333744,
+          "sharpe": 6.000291974760426,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 5,
+          "losing_trades": 7
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 4,
+            "profit_factor": 0.7949663262806284,
+            "max_drawdown_pct": 1.5210407320995727,
+            "net_profit": -31.186456917917923,
+            "sharpe": -1.3749063757954592
+          },
+          {
+            "window": 2,
+            "trades": 4,
+            "profit_factor": 1.6481066089438123,
+            "max_drawdown_pct": 1.0878968573015664,
+            "net_profit": 70.5073143066351,
+            "sharpe": 2.586504546041092
+          },
+          {
+            "window": 3,
+            "trades": 5,
+            "profit_factor": 22.396652554222435,
+            "max_drawdown_pct": 0.5067599992538726,
+            "net_profit": 1103.4542030315201,
+            "sharpe": 12.923834737455902
+          }
+        ]
+      },
+      "V3": {
+        "in_sample": {
+          "trades": 9,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.9831646148704005,
+          "net_profit": -4.122290160710865,
+          "strategy_return_pct": -0.04122290160710751,
+          "max_drawdown_pct": 1.7417750297195018,
+          "expectancy": -0.45803224007898496,
+          "sharpe": -0.05595600690481332,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 3,
+          "losing_trades": 6
+        },
+        "out_of_sample": {
+          "trades": 1,
+          "win_rate": 100.0,
+          "profit_factor": Infinity,
+          "net_profit": 82.79862494118859,
+          "strategy_return_pct": 0.8279862494118717,
+          "max_drawdown_pct": 0.0,
+          "expectancy": 82.79862494118859,
+          "sharpe": 0.0,
+          "buy_and_hold_return_pct": 85.43390780320487,
+          "stop_loss_exits": 0,
+          "losing_trades": 0
+        },
+        "stress_2x_fees": {
+          "trades": 9,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.9649208002052474,
+          "net_profit": -8.699014339370436,
+          "strategy_return_pct": -0.08699014339368372,
+          "max_drawdown_pct": 1.7643561442009923,
+          "expectancy": -0.9665571488189373,
+          "sharpe": -0.17211600466889793,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 3,
+          "losing_trades": 6
+        },
+        "stress_2x_slip": {
+          "trades": 9,
+          "win_rate": 33.33333333333333,
+          "profit_factor": 0.9739839677092645,
+          "net_profit": -6.4108842909504276,
+          "strategy_return_pct": -0.06410884290950492,
+          "max_drawdown_pct": 1.7530660702183194,
+          "expectancy": -0.7123204767722697,
+          "sharpe": -0.11404959212643098,
+          "buy_and_hold_return_pct": 91.4306804843924,
+          "stop_loss_exits": 3,
+          "losing_trades": 6
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 2,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 0.7363950956829285,
+            "net_profit": -73.63950956829206,
+            "sharpe": -38.876476653451796
+          },
+          {
+            "window": 2,
+            "trades": 6,
+            "profit_factor": 2.652510197164957,
+            "max_drawdown_pct": 0.7038748749812552,
+            "net_profit": 201.97352406177012,
+            "sharpe": 6.253122256070653
+          },
+          {
+            "window": 3,
+            "trades": 3,
+            "profit_factor": 2.038206719028835,
+            "max_drawdown_pct": 0.5089970875045828,
+            "net_profit": 52.95757378337576,
+            "sharpe": 4.215236546559976
+          }
+        ]
+      }
+    },
+    "USDJPY": {
+      "V0": {
+        "in_sample": {
+          "trades": 4,
+          "win_rate": 75.0,
+          "profit_factor": 19.413171198643205,
+          "net_profit": 161.04283523605207,
+          "strategy_return_pct": 1.6104283523604934,
+          "max_drawdown_pct": 0.08735723980937886,
+          "expectancy": 40.26070880901302,
+          "sharpe": 8.759978636908922,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "out_of_sample": {
+          "trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": 0.0,
+          "max_drawdown_pct": 0.0,
+          "expectancy": 0.0,
+          "sharpe": 0.0,
+          "buy_and_hold_return_pct": 2.128023215643493,
+          "strategy_return_pct": 0.0,
+          "stop_loss_exits": 0,
+          "losing_trades": 0
+        },
+        "stress_2x_fees": {
+          "trades": 4,
+          "win_rate": 75.0,
+          "profit_factor": 17.73002430687151,
+          "net_profit": 158.42419307914028,
+          "strategy_return_pct": 1.5842419307913858,
+          "max_drawdown_pct": 0.09459072506150533,
+          "expectancy": 39.60604826978507,
+          "sharpe": 8.608826140351994,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "stress_2x_slip": {
+          "trades": 4,
+          "win_rate": 75.0,
+          "profit_factor": 18.538139706385348,
+          "net_profit": 159.73345215018162,
+          "strategy_return_pct": 1.5973345215018142,
+          "max_drawdown_pct": 0.09097398243544041,
+          "expectancy": 39.933363037545405,
+          "sharpe": 8.684362103076214,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 0,
+          "losing_trades": 1
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 0,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 0.0,
+            "net_profit": 0.0,
+            "sharpe": 0.0
+          },
+          {
+            "window": 2,
+            "trades": 3,
+            "profit_factor": 18.35850864238252,
+            "max_drawdown_pct": 0.08735723980937886,
+            "net_profit": 151.81868549860553,
+            "sharpe": 9.386651989010248
+          },
+          {
+            "window": 3,
+            "trades": 3,
+            "profit_factor": 1.291201759340919,
+            "max_drawdown_pct": 0.20110307020348334,
+            "net_profit": 5.871402741890073,
+            "sharpe": 1.601653122255962
+          }
+        ]
+      },
+      "V1": {
+        "in_sample": {
+          "trades": 7,
+          "win_rate": 57.14285714285714,
+          "profit_factor": 5.259610282296798,
+          "net_profit": 149.4266179346147,
+          "strategy_return_pct": 1.4942661793461376,
+          "max_drawdown_pct": 0.2630458674182485,
+          "expectancy": 21.34665970494496,
+          "sharpe": 5.881174606325577,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 0,
+          "losing_trades": 3
+        },
+        "out_of_sample": {
+          "trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": 0.0,
+          "max_drawdown_pct": 0.0,
+          "expectancy": 0.0,
+          "sharpe": 0.0,
+          "buy_and_hold_return_pct": 2.128023215643493,
+          "strategy_return_pct": 0.0,
+          "stop_loss_exits": 0,
+          "losing_trades": 0
+        },
+        "stress_2x_fees": {
+          "trades": 7,
+          "win_rate": 57.14285714285714,
+          "profit_factor": 4.861693281265186,
+          "net_profit": 144.34453431542502,
+          "strategy_return_pct": 1.4434453431542371,
+          "max_drawdown_pct": 0.278830214467905,
+          "expectancy": 20.620647759346433,
+          "sharpe": 5.6757026017009355,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 0,
+          "losing_trades": 3
+        },
+        "stress_2x_slip": {
+          "trades": 7,
+          "win_rate": 57.14285714285714,
+          "profit_factor": 5.054320410388825,
+          "net_profit": 146.8853056316599,
+          "strategy_return_pct": 1.468853056316588,
+          "max_drawdown_pct": 0.2709381938283656,
+          "expectancy": 20.983615090237127,
+          "sharpe": 5.778370124249241,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 0,
+          "losing_trades": 3
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 1,
+            "profit_factor": Infinity,
+            "max_drawdown_pct": 0.0,
+            "net_profit": 14.911700013312823,
+            "sharpe": 0.0
+          },
+          {
+            "window": 2,
+            "trades": 5,
+            "profit_factor": 4.571885467277691,
+            "max_drawdown_pct": 0.2630458662113779,
+            "net_profit": 125.11474610112775,
+            "sharpe": 5.680811200648466
+          },
+          {
+            "window": 3,
+            "trades": 3,
+            "profit_factor": 1.291201759340919,
+            "max_drawdown_pct": 0.20110307020348334,
+            "net_profit": 5.871402741890073,
+            "sharpe": 1.601653122255962
+          }
+        ]
+      },
+      "V2": {
+        "in_sample": {
+          "trades": 12,
+          "win_rate": 8.333333333333332,
+          "profit_factor": 1.0867326807908964,
+          "net_profit": 48.042460663876504,
+          "strategy_return_pct": 0.48042460663877407,
+          "max_drawdown_pct": 3.0124111039085064,
+          "expectancy": 4.003538388656375,
+          "sharpe": 0.4644243773321793,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 10,
+          "losing_trades": 11
+        },
+        "out_of_sample": {
+          "trades": 1,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": -50.915780241286086,
+          "strategy_return_pct": -0.5091578024128629,
+          "max_drawdown_pct": 0.5091578024128648,
+          "expectancy": -50.915780241286086,
+          "sharpe": 0.0,
+          "buy_and_hold_return_pct": 2.128023215643493,
+          "stop_loss_exits": 1,
+          "losing_trades": 1
+        },
+        "stress_2x_fees": {
+          "trades": 12,
+          "win_rate": 8.333333333333332,
+          "profit_factor": 1.071234016833798,
+          "net_profit": 39.9628866748962,
+          "strategy_return_pct": 0.39962886674898,
+          "max_drawdown_pct": 3.0455075747140863,
+          "expectancy": 3.3302405562413497,
+          "sharpe": 0.4091615124771387,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 10,
+          "losing_trades": 11
+        },
+        "stress_2x_slip": {
+          "trades": 12,
+          "win_rate": 8.333333333333332,
+          "profit_factor": 1.0789326181523855,
+          "net_profit": 44.001933270640045,
+          "strategy_return_pct": 0.4400193327064317,
+          "max_drawdown_pct": 3.028960494696956,
+          "expectancy": 3.666827772553337,
+          "sharpe": 0.4367952225165482,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 10,
+          "losing_trades": 11
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 4,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 1.9151906677657644,
+            "net_profit": -191.51906677657757,
+            "sharpe": -131.648953463113
+          },
+          {
+            "window": 2,
+            "trades": 5,
+            "profit_factor": 2.904652406303462,
+            "max_drawdown_pct": 1.5147823607505608,
+            "net_profit": 402.425052666541,
+            "sharpe": 4.394403960681918
+          },
+          {
+            "window": 3,
+            "trades": 3,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 1.5220300209374908,
+            "net_profit": -152.2030020937479,
+            "sharpe": -2291.9976133052205
+          }
+        ]
+      },
+      "V3": {
+        "in_sample": {
+          "trades": 11,
+          "win_rate": 27.27272727272727,
+          "profit_factor": 0.2647654662364404,
+          "net_profit": -123.15561001106413,
+          "strategy_return_pct": -1.2315561001106423,
+          "max_drawdown_pct": 1.2315561001106472,
+          "expectancy": -11.195964546460376,
+          "sharpe": -7.975038893342836,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 1,
+          "losing_trades": 8
+        },
+        "out_of_sample": {
+          "trades": 0,
+          "win_rate": 0.0,
+          "profit_factor": 0.0,
+          "net_profit": 0.0,
+          "max_drawdown_pct": 0.0,
+          "expectancy": 0.0,
+          "sharpe": 0.0,
+          "buy_and_hold_return_pct": 2.128023215643493,
+          "strategy_return_pct": 0.0,
+          "stop_loss_exits": 0,
+          "losing_trades": 0
+        },
+        "stress_2x_fees": {
+          "trades": 11,
+          "win_rate": 18.181818181818183,
+          "profit_factor": 0.25057018192888986,
+          "net_profit": -129.81060350564576,
+          "strategy_return_pct": -1.2981060350564566,
+          "max_drawdown_pct": 1.2981060350564622,
+          "expectancy": -11.800963955058705,
+          "sharpe": -8.36782500526342,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 1,
+          "losing_trades": 9
+        },
+        "stress_2x_slip": {
+          "trades": 11,
+          "win_rate": 18.181818181818183,
+          "profit_factor": 0.25728558576506233,
+          "net_profit": -126.48361062977864,
+          "strategy_return_pct": -1.2648361062978064,
+          "max_drawdown_pct": 1.2648361062978075,
+          "expectancy": -11.498510057252604,
+          "sharpe": -8.1719879331395,
+          "buy_and_hold_return_pct": 42.192868024471,
+          "stop_loss_exits": 1,
+          "losing_trades": 9
+        },
+        "walk_forward": [
+          {
+            "window": 1,
+            "trades": 0,
+            "profit_factor": 0.0,
+            "max_drawdown_pct": 0.0,
+            "net_profit": 0.0,
+            "sharpe": 0.0
+          },
+          {
+            "window": 2,
+            "trades": 7,
+            "profit_factor": 0.14632357430075785,
+            "max_drawdown_pct": 1.1517754390557093,
+            "net_profit": -98.3243540021249,
+            "sharpe": -13.439079081749115
+          },
+          {
+            "window": 3,
+            "trades": 4,
+            "profit_factor": 1.3961830176788954,
+            "max_drawdown_pct": 0.5276325426516997,
+            "net_profit": 40.33519590155406,
+            "sharpe": 2.235236332061777
+          }
+        ]
+      }
+    }
+  },
+  "gates": {
+    "EURUSD": {
+      "V0": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "out-of-sample profit factor 0.00 below 1.20",
+          "trades 4 below 40",
+          "walk-forward unstable: 1/3 windows profitable"
+        ]
+      },
+      "V1": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "out-of-sample profit factor 0.00 below 1.20",
+          "trades 5 below 40"
+        ]
+      },
+      "V2": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 0.80 below 1.50",
+          "sharpe -1.38 below 0.80",
+          "trades 9 below 40",
+          "doubled-fees stress test not profitable",
+          "doubled-slippage stress test not profitable",
+          "walk-forward unstable: 1/3 windows profitable"
+        ]
+      },
+      "V3": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "trades 11 below 40"
+        ]
+      }
+    },
+    "GBPUSD": {
+      "V0": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 0.85 below 1.50",
+          "out-of-sample profit factor 0.72 below 1.20",
+          "sharpe -0.93 below 0.80",
+          "trades 3 below 40",
+          "doubled-fees stress test not profitable",
+          "doubled-slippage stress test not profitable",
+          "walk-forward unstable: 0/3 windows profitable"
+        ]
+      },
+      "V1": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "out-of-sample profit factor 0.72 below 1.20",
+          "trades 9 below 40",
+          "walk-forward unstable: 1/3 windows profitable"
+        ]
+      },
+      "V2": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 0.00 below 1.50",
+          "out-of-sample profit factor 0.33 below 1.20",
+          "sharpe -35.24 below 0.80",
+          "trades 7 below 40",
+          "doubled-fees stress test not profitable",
+          "doubled-slippage stress test not profitable",
+          "walk-forward unstable: 0/3 windows profitable"
+        ]
+      },
+      "V3": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 0.10 below 1.50",
+          "out-of-sample profit factor 0.34 below 1.20",
+          "sharpe -15.94 below 0.80",
+          "trades 11 below 40",
+          "doubled-fees stress test not profitable",
+          "doubled-slippage stress test not profitable",
+          "walk-forward unstable: 0/3 windows profitable"
+        ]
+      }
+    },
+    "XAUUSD": {
+      "V0": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 0.21 below 1.50",
+          "sharpe -8.70 below 0.80",
+          "trades 12 below 40",
+          "strategy return -1.7% does not beat buy-and-hold 91.4%",
+          "doubled-fees stress test not profitable",
+          "doubled-slippage stress test not profitable",
+          "walk-forward unstable: 1/3 windows profitable"
+        ]
+      },
+      "V1": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 0.53 below 1.50",
+          "sharpe -3.40 below 0.80",
+          "trades 17 below 40",
+          "strategy return -1.2% does not beat buy-and-hold 91.4%",
+          "doubled-fees stress test not profitable",
+          "doubled-slippage stress test not profitable",
+          "walk-forward unstable: 1/3 windows profitable"
+        ]
+      },
+      "V2": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "trades 14 below 40",
+          "strategy return 4.8% does not beat buy-and-hold 91.4%"
+        ]
+      },
+      "V3": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 0.98 below 1.50",
+          "sharpe -0.06 below 0.80",
+          "trades 9 below 40",
+          "strategy return -0.0% does not beat buy-and-hold 91.4%",
+          "doubled-fees stress test not profitable",
+          "doubled-slippage stress test not profitable"
+        ]
+      }
+    },
+    "USDJPY": {
+      "V0": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "out-of-sample profit factor 0.00 below 1.20",
+          "trades 4 below 40",
+          "strategy return 1.6% does not beat buy-and-hold 42.2%"
+        ]
+      },
+      "V1": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "out-of-sample profit factor 0.00 below 1.20",
+          "trades 7 below 40",
+          "strategy return 1.5% does not beat buy-and-hold 42.2%"
+        ]
+      },
+      "V2": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 1.09 below 1.50",
+          "out-of-sample profit factor 0.00 below 1.20",
+          "sharpe 0.46 below 0.80",
+          "trades 12 below 40",
+          "strategy return 0.5% does not beat buy-and-hold 42.2%",
+          "walk-forward unstable: 1/3 windows profitable"
+        ]
+      },
+      "V3": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "recommended_mode": "BACKTEST_ONLY",
+        "failed_rules": [
+          "profit factor 0.26 below 1.50",
+          "out-of-sample profit factor 0.00 below 1.20",
+          "sharpe -7.98 below 0.80",
+          "trades 11 below 40",
+          "strategy return -1.2% does not beat buy-and-hold 42.2%",
+          "doubled-fees stress test not profitable",
+          "doubled-slippage stress test not profitable",
+          "walk-forward unstable: 1/3 windows profitable"
+        ]
+      }
+    }
+  },
+  "config": {
+    "ema_regime": 200,
+    "ema_fast": 21,
+    "ema_slow": 55,
+    "rsi_length": 14,
+    "rsi_cross_level": 50,
+    "atr_length": 14,
+    "atr_stop_mult": 2.0,
+    "donchian_in": 20,
+    "donchian_out": 10,
+    "bb_length": 20,
+    "bb_std": 2.0,
+    "squeeze_percentile": 30,
+    "squeeze_lookback": 100,
+    "initial_equity": 10000.0,
+    "risk_per_trade_pct": 0.5,
+    "commission_bps_per_side": 1.0,
+    "slippage_bps_per_side": 0.5,
+    "min_trades_per_asset": 40,
+    "min_profit_factor": 1.5,
+    "min_oos_profit_factor": 1.2,
+    "max_drawdown_pct": 25.0,
+    "min_sharpe": 0.8,
+    "oos_fraction": 0.2,
+    "wf_windows": 3,
+    "stress_fee_multiplier": 2.0,
+    "stress_slippage_multiplier": 2.0,
+    "enable_session_filter": true,
+    "enable_regime_filter": true,
+    "session_cfg": null,
+    "regime_cfg": null,
+    "regimes_allowed": [
+      "trending"
+    ]
+  }
+}
