@@ -1,0 +1,181 @@
+{
+  "variants": [
+    "V0",
+    "V1",
+    "V2",
+    "V3"
+  ],
+  "symbols": [
+    "EURUSD",
+    "GBPUSD",
+    "XAUUSD",
+    "USDJPY"
+  ],
+  "results": {},
+  "gates": {
+    "EURUSD": {
+      "V0": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V1": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V2": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V3": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      }
+    },
+    "GBPUSD": {
+      "V0": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V1": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V2": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V3": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      }
+    },
+    "XAUUSD": {
+      "V0": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V1": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V2": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V3": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      }
+    },
+    "USDJPY": {
+      "V0": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V1": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V2": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      },
+      "V3": {
+        "passed": false,
+        "status": "BLOCK_LIVE",
+        "failed_rules": [
+          "no data available yet \u2014 see PR 3"
+        ],
+        "recommended_mode": "BACKTEST_ONLY"
+      }
+    }
+  },
+  "config": {
+    "ema_regime": 200,
+    "ema_fast": 21,
+    "ema_slow": 55,
+    "rsi_length": 14,
+    "rsi_cross_level": 50,
+    "atr_length": 14,
+    "atr_stop_mult": 2.0,
+    "donchian_in": 20,
+    "donchian_out": 10,
+    "bb_length": 20,
+    "bb_std": 2.0,
+    "squeeze_percentile": 30,
+    "squeeze_lookback": 100,
+    "initial_equity": 10000.0,
+    "risk_per_trade_pct": 0.5,
+    "commission_bps_per_side": 1.0,
+    "slippage_bps_per_side": 0.5,
+    "min_trades_per_asset": 40,
+    "min_profit_factor": 1.5,
+    "min_oos_profit_factor": 1.2,
+    "max_drawdown_pct": 25.0,
+    "min_sharpe": 0.8,
+    "oos_fraction": 0.2,
+    "wf_windows": 3,
+    "stress_fee_multiplier": 2.0,
+    "stress_slippage_multiplier": 2.0
+  }
+}
