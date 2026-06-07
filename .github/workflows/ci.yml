@@ -6,7 +6,28 @@ on:
   pull_request:
 
 jobs:
+  safety:
+    name: Safety lock (env + yaml + gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Check safe defaults
+        run: python scripts/check_safe_defaults.py
+
   test:
+    name: Tests
+    needs: safety
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,4 +43,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Test
-        run: python -m pytest
+        run: python -m pytest -q

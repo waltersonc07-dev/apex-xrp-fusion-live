@@ -144,7 +144,7 @@ apex-xrp-fusion-live
 ```
 
 1. Push repo to:
-   https://github.com/waltersonc07/apex-xrp-fusion-live.git
+   https://github.com/waltersonc07-dev/apex-xrp-fusion-live.git
 2. In Render, create a new Web Service:
    `apex-xrp-fusion-live`
 3. Connect GitHub repo:
@@ -193,8 +193,10 @@ RISK_MODE=BACKTEST_ONLY
 Repo:
 
 ```text
-https://github.com/waltersonc07/apex-xrp-fusion-live.git
+https://github.com/waltersonc07-dev/apex-xrp-fusion-live.git
 ```
+
+Safety overview: see [SAFETY.md](SAFETY.md) for the three-layer live-trading lock and how to verify it.
 
 Suggested commands after tests and validation pass:
 
