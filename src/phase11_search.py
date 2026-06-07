@@ -55,6 +55,11 @@ from .phase11_gate import (
     evaluate_gate,
 )
 from .phase11_grid import GridSpec, load_grid, summarize as summarize_grid
+from .phase11_portfolio import (
+    build_portfolio_verdicts,
+    render_portfolio_markdown,
+    write_portfolio_csv,
+)
 from .phase11_orchestrator import (
     DEFAULT_N_FOLDS,
     DEFAULT_WARMUP_BARS,
@@ -476,6 +481,14 @@ def main(argv: list[str] | None = None) -> int:
         "--output-md",
         default="reports/phase11_search.md",
     )
+    parser.add_argument(
+        "--output-portfolio-csv",
+        default="reports/phase11_portfolio.csv",
+    )
+    parser.add_argument(
+        "--output-portfolio-md",
+        default="reports/phase11_portfolio.md",
+    )
     args = parser.parse_args(argv)
 
     grid = load_grid()
@@ -512,6 +525,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(f"Wrote {csv_path} ({len(rows)} rows)")
     print(f"Wrote {md_path}")
+
+    # PR 4: aggregate to portfolio verdicts. Write only if any primary
+    # symbols are present in the run, otherwise the portfolio CSV is
+    # all-INSUFFICIENT_DATA noise.
+    portfolio_verdicts = build_portfolio_verdicts(rows, n_tested=grid.total)
+    if portfolio_verdicts:
+        portfolio_csv = Path(args.output_portfolio_csv)
+        write_portfolio_csv(portfolio_verdicts, portfolio_csv)
+        portfolio_md = Path(args.output_portfolio_md)
+        portfolio_md.parent.mkdir(parents=True, exist_ok=True)
+        portfolio_md.write_text(
+            render_portfolio_markdown(portfolio_verdicts, n_tested=grid.total),
+            encoding="utf-8",
+        )
+        print(f"Wrote {portfolio_csv} ({len(portfolio_verdicts)} combos)")
+        print(f"Wrote {portfolio_md}")
     return 0
 
 
