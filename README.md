@@ -99,6 +99,33 @@ Generated reports include:
 - `reports/pine_python_alignment_report.md`
 - `reports/live_unlock_report.md`
 
+## Run Phase 10 — FX / Gold Daily Research
+
+Phase 10 pivots strategy research from XRP 1H to **daily-timeframe trend
+following** on EURUSD, GBPUSD, and XAUUSD (gold), with USDJPY as a control.
+It is a standalone research module — it never touches the XRP strategy, the
+live flags, or the validation gate that locks live trading.
+
+```powershell
+.\.venv\Scripts\python.exe -m src.phase10_fx_gold_daily
+```
+
+Outputs:
+
+- `reports/phase10_verdict.md` — human-readable verdict per variant per symbol
+- `reports/phase10_verdict.json` — machine-readable for the dashboard
+
+Four non-optimized variants are tested (V0/V1/V2/V3). Gate thresholds for the
+daily timeframe: PF >= 1.50, OOS PF >= 1.20, max drawdown <= 25%, Sharpe >= 0.8,
+trades >= 40 per asset, must beat buy-and-hold, must survive 2x fees and
+2x slippage, walk-forward across 3 windows.
+
+**Even a passing verdict reports `BACKTEST_ONLY`.** A pass is a research
+candidate, not an authorization. Live activation requires explicit owner
+approval. See [SAFETY.md](SAFETY.md).
+
+The data downloader for daily FX/Gold CSVs ships in PR 3.
+
 ## Run Core Diagnostic
 
 Run the expanded 9-row strategy diagnostic leaderboard:
