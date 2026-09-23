@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -120,3 +121,38 @@ async def tradingview_webhook(request: Request, x_webhook_secret: str | None = H
         "notes": payload.get("notes", ""),
     })
     return result
+
+
+@app.post("/webhook/alert")
+async def alert_webhook(request: Request, x_webhook_secret: str | None = Header(default=None)):
+    """Notify-only alert intake: Telegram + recent buffer. Never places orders."""
+    from .alert_notify import handle_alert_payload, secret_ok
+
+    provided = x_webhook_secret or request.query_params.get("secret")
+    raw_body = await request.body()
+    payload: dict = {}
+    if raw_body:
+        try:
+            parsed = json.loads(raw_body)
+            if isinstance(parsed, dict):
+                payload = parsed
+            else:
+                payload = {"note": str(parsed)}
+        except Exception:
+            payload = {"note": raw_body.decode("utf-8", errors="replace")}
+    provided = provided or payload.get("secret")
+    if not secret_ok(provided):
+        raise HTTPException(status_code=401, detail="invalid webhook secret")
+    payload.pop("secret", None)
+    return handle_alert_payload(payload)
+
+
+@app.get("/alerts/recent")
+def alerts_recent(request: Request, x_webhook_secret: str | None = Header(default=None), limit: int = 20):
+    """Read-only recent notify alerts for Grok Bot mirroring. Requires secret."""
+    from .alert_notify import load_recent, secret_ok
+
+    provided = x_webhook_secret or request.query_params.get("secret")
+    if not secret_ok(provided):
+        raise HTTPException(status_code=401, detail="invalid webhook secret")
+    return {"alerts": load_recent(max(1, min(limit, 50)))}

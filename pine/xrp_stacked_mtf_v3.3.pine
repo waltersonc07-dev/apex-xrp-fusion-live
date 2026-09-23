@@ -204,6 +204,25 @@ if flattenEnd and not inRange and strategy.position_size > 0
 exitFired = strategy.position_size > 0 and exitSig
 
 // ════════════════════════════════════════════
+// Alerts (notify-only — wire webhook in TradingView)
+// ════════════════════════════════════════════
+trailMoved = strategy.position_size > 0 and useStop and trailST and not na(stopLevel) and not na(stopLevel[1]) and stopLevel > stopLevel[1]
+
+alertJson(action, note) =>
+    '{"action":"' + action + '","strategy":"StackedMTF_v3.3","symbol":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","price":' + str.tostring(close, format.mintick) + ',"note":"' + note + '"}'
+
+if enterLong
+    alert(alertJson("ENTRY", "Long entry — 15m+2H stack synced"), alert.freq_once_per_bar_close)
+if exitFired
+    alert(alertJson("EXIT", exitShort), alert.freq_once_per_bar_close)
+if trailMoved
+    alert(alertJson("TRAIL", "Stop trailed to " + str.tostring(stopLevel, format.mintick)), alert.freq_once_per_bar_close)
+
+alertcondition(enterLong, title = "Stacked MTF Long Entry", message = "ENTRY {{ticker}} @ {{close}}")
+alertcondition(exitFired, title = "Stacked MTF Exit", message = "EXIT {{ticker}} @ {{close}}")
+alertcondition(trailMoved, title = "Stacked MTF Trail", message = "TRAIL {{ticker}} stop update @ {{close}}")
+
+// ════════════════════════════════════════════
 // Trade capture (gross, because engine cost = 0)
 // ════════════════════════════════════════════
 var array<float> tGross = array.new<float>()
