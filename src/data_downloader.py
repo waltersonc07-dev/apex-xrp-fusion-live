@@ -14,10 +14,10 @@ from .data_loader import validate_ohlcv_csv
 
 
 BINANCE_KLINES_URLS = [
-    "https://api.binance.com/api/v3/klines",
     "https://api.binance.us/api/v3/klines",
+    "https://api.binance.com/api/v3/klines",
 ]
-TIMEFRAME_TO_MS = {"1h": 60 * 60 * 1000}
+TIMEFRAME_TO_MS = {"15m": 15 * 60 * 1000, "1h": 60 * 60 * 1000, "2h": 2 * 60 * 60 * 1000}
 
 
 def _parse_datetime_ms(value: str | None) -> int | None:
