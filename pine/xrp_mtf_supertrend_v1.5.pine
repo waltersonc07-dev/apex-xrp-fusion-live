@@ -1,0 +1,296 @@
+//@version=6
+// XRP Multi-Timeframe Supertrend Strategy v1.5 — 1H BIAS / 15M EXECUTION, with COST SWEEP + IS/OOS SPLIT
+// Apply to the 15-MINUTE chart of XRPUSDT.
+//
+// Logic: when the 1-HOUR candle closes above its trend filter (1H close > 1H DEMA200),
+// that's the higher-timeframe confirmation. We then drop to the 15-MINUTE chart and wait
+// for the SAME bullish alignment there (15m close > 15m DEMA200, EMA9>EMA21, and a fresh
+// SuperTrend flip to green) before buying. Mirror logic for shorts.
+//
+// Two analysis layers are included:
+//   1) COST SWEEP — engine commission/slippage are set to 0 here so the captured
+//      PnL is GROSS. The analytics table then shows profit factor & net at a grid
+//      of round-trip cost levels, plus the exact breakeven cost where PF = 1.0.
+//      (PF = 1.0 occurs precisely when net = 0, so breakeven% = 100*sumGross/sumNotional.)
+//      NOTE: because engine cost is 0, TradingView's built-in report is GROSS —
+//      read cost-adjusted numbers off the ANALYTICS table (its 0.00% row = the
+//      built-in report).
+//   2) IS / OOS SPLIT — every closed trade is tagged in-sample vs out-of-sample by
+//      its exit date against the "IS/OOS split" input, reported net of an assumed cost.
+
+strategy(
+     "XRP MTF Supertrend v1.5 (1H/15M, cost + OOS)",
+     overlay              = true,
+     initial_capital      = 10000,
+     currency             = currency.USD,
+     commission_type      = strategy.commission.percent,
+     commission_value     = 0.0,    // zeroed on purpose — cost modeled in the table
+     slippage             = 0,      // zeroed on purpose — included in round-trip cost%
+     pyramiding           = 0,
+     calc_on_every_tick   = false,
+     process_orders_on_close = true)
+
+// ─────────────────────────────────────────────
+// Inputs
+// ─────────────────────────────────────────────
+grpBT = "Backtest window"
+startTime = input.time(timestamp("2023-01-01T00:00:00"), "Backtest Start", group=grpBT)
+endTime   = input.time(timestamp("2026-12-31T23:59:00"), "Backtest End",   group=grpBT)
+inDateRange = time >= startTime and time <= endTime
+
+grpOOS = "OOS / cost analysis"
+splitDate     = input.time(timestamp("2025-09-01T00:00:00"), "IS/OOS split (trades after = OOS)", group=grpOOS)
+assumeCostPct = input.float(0.10, "Assumed round-trip cost % (for IS/OOS net)", step=0.01, minval=0, group=grpOOS)
+
+grpR = "Risk"
+riskPercent = input.float(1.0, "Risk Per Trade %", minval=0.1, maxval=5.0, step=0.1, group=grpR)
+maxLev      = input.float(20.0, "Max notional / equity (sanity cap)", step=1, group=grpR)
+
+grpI = "Indicators"
+htf      = input.timeframe("60", "Higher-TF bias", group=grpI)
+demaLen  = input.int(200, "DEMA length",  group=grpI)
+emaFast  = input.int(9,   "EMA fast",     group=grpI)
+emaSlow  = input.int(21,  "EMA slow",     group=grpI)
+stAtr    = input.int(12,  "SuperTrend ATR period", group=grpI)
+stMult   = input.float(3.0,"SuperTrend multiplier", step=0.1, group=grpI)
+
+grpD = "Display"
+showDash = input.bool(true, "Show dashboard", group=grpD)
+showST   = input.bool(true, "Plot SuperTrend", group=grpD)
+
+// ─────────────────────────────────────────────
+// Indicators
+// ─────────────────────────────────────────────
+// DEMA is not built in — define it: 2*EMA - EMA(EMA)
+dema(src, len) =>
+    e1 = ta.ema(src, len)
+    2 * e1 - ta.ema(e1, len)
+
+ema9    = ta.ema(close, emaFast)
+ema21   = ta.ema(close, emaSlow)
+dema200 = dema(close, demaLen)
+
+[stLine, stDir] = ta.supertrend(stMult, stAtr)
+flipBuy  = stDir < 0 and stDir[1] > 0
+flipSell = stDir > 0 and stDir[1] < 0
+
+[h1Close, h1Dema] = request.security(syminfo.tickerid, htf, [close, dema(close, demaLen)], lookahead=barmerge.lookahead_off)
+h1LongBias  = h1Close > h1Dema
+h1ShortBias = h1Close < h1Dema
+
+// ─────────────────────────────────────────────
+// Entry / exit conditions
+// ─────────────────────────────────────────────
+emaBull = ema9 > ema21
+emaBear = ema9 < ema21
+
+longSetup  = h1LongBias  and close > dema200 and emaBull and flipBuy
+shortSetup = h1ShortBias and close < dema200 and emaBear and flipSell
+
+flat = strategy.position_size == 0
+enterLong  = inDateRange and flat and longSetup
+enterShort = inDateRange and flat and shortSetup
+
+sizeFor(riskDist) =>
+    raw = riskDist > 0 ? (strategy.equity * riskPercent / 100.0) / riskDist : 0.0
+    cap = close > 0 ? (strategy.equity * maxLev) / close : raw
+    math.min(raw, cap)
+
+longRisk  = close - stLine
+shortRisk = stLine - close
+
+var float entryStop = na
+
+if enterLong
+    q = sizeFor(longRisk)
+    if q > 0
+        strategy.entry("Long", strategy.long, qty=q)
+        entryStop := stLine
+
+if enterShort
+    q = sizeFor(shortRisk)
+    if q > 0
+        strategy.entry("Short", strategy.short, qty=q)
+        entryStop := stLine
+
+if strategy.position_size > 0
+    strategy.exit("L-Stop", from_entry="Long", stop=entryStop)
+    if flipSell
+        strategy.close("Long", comment="ST flip")
+if strategy.position_size < 0
+    strategy.exit("S-Stop", from_entry="Short", stop=entryStop)
+    if flipBuy
+        strategy.close("Short", comment="ST flip")
+
+// ═════════════════════════════════════════════
+// TRADE CAPTURE (gross, since engine cost = 0)
+// ═════════════════════════════════════════════
+var array<float> tGross    = array.new<float>()
+var array<float> tNotional = array.new<float>()
+var array<int>   tExit     = array.new<int>()
+var float sumGross    = 0.0
+var float sumNotional = 0.0
+var int   lastCount   = 0
+
+if strategy.closedtrades > lastCount
+    for i = lastCount to strategy.closedtrades - 1
+        g    = strategy.closedtrades.profit(i)
+        notl = strategy.closedtrades.entry_price(i) * math.abs(strategy.closedtrades.size(i))
+        array.push(tGross, g)
+        array.push(tNotional, notl)
+        array.push(tExit, strategy.closedtrades.exit_time(i))
+        sumGross    += g
+        sumNotional += notl
+    lastCount := strategy.closedtrades
+
+// PF at a given round-trip cost % (needs per-trade bucketing)
+pfAtCost(costPct) =>
+    float gp = 0.0
+    float gl = 0.0
+    int n = array.size(tGross)
+    if n > 0
+        for i = 0 to n - 1
+            net = array.get(tGross, i) - array.get(tNotional, i) * costPct / 100.0
+            if net >= 0
+                gp += net
+            else
+                gl += -net
+    gl > 0 ? gp / gl : na
+
+netAtCost(costPct) => sumGross - costPct / 100.0 * sumNotional
+
+
+// ═════════════════════════════════════════════
+// Alerts (notify-only — wire webhook in TradingView; no broker orders)
+// ═════════════════════════════════════════════
+exitLongAlert  = strategy.position_size[1] > 0 and strategy.position_size <= 0
+exitShortAlert = strategy.position_size[1] < 0 and strategy.position_size >= 0
+exitNote = exitLongAlert ? (flipSell ? "ST flip" : "Stop / exit") : (flipBuy ? "ST flip" : "Stop / exit")
+
+alertJson(action, note) =>
+    '{"action":"' + action + '","strategy":"MTF_Supertrend_v1.5","symbol":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","price":' + str.tostring(close, format.mintick) + ',"note":"' + note + '"}'
+
+if enterLong
+    alert(alertJson("ENTRY", "Long — 1H bias + 15m ST flip"), alert.freq_once_per_bar_close)
+if enterShort
+    alert(alertJson("ENTRY", "Short — 1H bias + 15m ST flip"), alert.freq_once_per_bar_close)
+if exitLongAlert
+    alert(alertJson("EXIT", "Long exit — " + exitNote), alert.freq_once_per_bar_close)
+if exitShortAlert
+    alert(alertJson("EXIT", "Short exit — " + exitNote), alert.freq_once_per_bar_close)
+
+alertcondition(enterLong,  title="MTF ST v1.5 Long Entry",  message="ENTRY LONG {{ticker}} @ {{close}}")
+alertcondition(enterShort, title="MTF ST v1.5 Short Entry", message="ENTRY SHORT {{ticker}} @ {{close}}")
+alertcondition(exitLongAlert or exitShortAlert, title="MTF ST v1.5 Exit", message="EXIT {{ticker}} @ {{close}}")
+
+// ─────────────────────────────────────────────
+// Plots
+// ─────────────────────────────────────────────
+plot(ema9,    "EMA9",    color=color.new(color.aqua,   0))
+plot(ema21,   "EMA21",   color=color.new(color.orange, 0))
+plot(dema200, "DEMA200", color=color.new(color.fuchsia,0), linewidth=2)
+plot(showST ? stLine : na, "SuperTrend", color=stDir < 0 ? color.green : color.red, linewidth=2, style=plot.style_linebr)
+
+plotshape(enterLong,  "Long entry",  shape.triangleup,   location.belowbar, color.lime, size=size.small, text="L")
+plotshape(enterShort, "Short entry", shape.triangledown, location.abovebar, color.red,  size=size.small, text="S")
+
+// ─────────────────────────────────────────────
+// Original dashboard (top-right) — gross, matches the 0.00% cost row
+// ─────────────────────────────────────────────
+blockerLong = not h1LongBias ? "1H bias" : close <= dema200 ? "15M DEMA" : not emaBull ? "EMA9/21" : not flipBuy ? "WAIT ST" : "READY"
+var table dash = table.new(position.top_right, 2, 7, bgcolor=color.new(color.black, 80), border_width=1)
+if showDash and barstate.islast
+    table.cell(dash, 0, 0, "XRP MTF ST 1H/15M", text_color=color.yellow, text_size=size.small)
+    table.cell(dash, 1, 0, "", text_size=size.small)
+    table.cell(dash, 0, 1, "1H bias", text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 1, h1LongBias ? "LONG" : h1ShortBias ? "SHORT" : "FLAT", text_color=h1LongBias ? color.lime : color.red, text_size=size.tiny)
+    table.cell(dash, 0, 2, "EMA 9/21", text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 2, emaBull ? "BULL" : emaBear ? "BEAR" : "FLAT", text_color=emaBull ? color.lime : color.red, text_size=size.tiny)
+    table.cell(dash, 0, 3, "SuperTrend", text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 3, stDir < 0 ? "BUY" : "SELL", text_color=stDir < 0 ? color.lime : color.red, text_size=size.tiny)
+    table.cell(dash, 0, 4, "Position", text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 4, strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : "FLAT", text_color=strategy.position_size > 0 ? color.lime : strategy.position_size < 0 ? color.red : color.gray, text_size=size.tiny)
+    table.cell(dash, 0, 5, "Long blocker", text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 5, blockerLong, text_color=blockerLong == "READY" ? color.lime : color.gray, text_size=size.tiny)
+    table.cell(dash, 0, 6, "Trades", text_color=color.white, text_size=size.tiny)
+    table.cell(dash, 1, 6, str.tostring(strategy.closedtrades), text_color=color.white, text_size=size.tiny)
+
+// ═════════════════════════════════════════════
+// ANALYTICS TABLE (top-left): IS/OOS split + cost sweep
+// ═════════════════════════════════════════════
+var table an = table.new(position.top_left, 3, 16, bgcolor=color.new(color.black, 85), border_width=1)
+
+f_pfcol(v) => na(v) ? color.gray : v >= 1 ? color.lime : color.red
+f_netcol(v) => v >= 0 ? color.lime : color.red
+
+if barstate.islast
+    // ---- IS / OOS (net of assumeCostPct) ----
+    float isGP=0.0, isGL=0.0, oosGP=0.0, oosGL=0.0, isNet=0.0, oosNet=0.0
+    int isN=0, isW=0, oosN=0, oosW=0
+    int n = array.size(tGross)
+    if n > 0
+        for i = 0 to n - 1
+            net = array.get(tGross, i) - array.get(tNotional, i) * assumeCostPct / 100.0
+            if array.get(tExit, i) >= splitDate
+                oosN += 1
+                oosNet += net
+                if net >= 0
+                    oosGP += net
+                    oosW += 1
+                else
+                    oosGL += -net
+            else
+                isN += 1
+                isNet += net
+                if net >= 0
+                    isGP += net
+                    isW += 1
+                else
+                    isGL += -net
+    isPF  = isGL  > 0 ? isGP  / isGL  : na
+    oosPF = oosGL > 0 ? oosGP / oosGL : na
+    isWR  = isN  > 0 ? 100.0 * isW  / isN  : na
+    oosWR = oosN > 0 ? 100.0 * oosW / oosN : na
+
+    // ---- breakeven cost (PF = 1.0  <=>  net = 0) ----
+    beCost = sumNotional > 0 ? 100.0 * sumGross / sumNotional : na
+
+    table.cell(an, 0, 0, "IN/OUT SAMPLE", text_color=color.aqua, text_size=size.tiny)
+    table.cell(an, 1, 0, "IS",  text_color=color.aqua, text_size=size.tiny)
+    table.cell(an, 2, 0, "OOS", text_color=color.aqua, text_size=size.tiny)
+    table.cell(an, 0, 1, "Trades", text_color=color.white, text_size=size.tiny)
+    table.cell(an, 1, 1, str.tostring(isN),  text_color=color.white, text_size=size.tiny)
+    table.cell(an, 2, 1, str.tostring(oosN), text_color=color.white, text_size=size.tiny)
+    table.cell(an, 0, 2, "Win %", text_color=color.white, text_size=size.tiny)
+    table.cell(an, 1, 2, na(isWR)?"-":str.format("{0,number,#.#}", isWR),  text_color=color.white, text_size=size.tiny)
+    table.cell(an, 2, 2, na(oosWR)?"-":str.format("{0,number,#.#}", oosWR), text_color=color.white, text_size=size.tiny)
+    table.cell(an, 0, 3, "PF (net)", text_color=color.white, text_size=size.tiny)
+    table.cell(an, 1, 3, na(isPF)?"-":str.format("{0,number,#.##}", isPF),  text_color=f_pfcol(isPF),  text_size=size.tiny)
+    table.cell(an, 2, 3, na(oosPF)?"-":str.format("{0,number,#.##}", oosPF), text_color=f_pfcol(oosPF), text_size=size.tiny)
+    table.cell(an, 0, 4, "Net $", text_color=color.white, text_size=size.tiny)
+    table.cell(an, 1, 4, str.format("{0,number,#.#}", isNet),  text_color=f_netcol(isNet),  text_size=size.tiny)
+    table.cell(an, 2, 4, str.format("{0,number,#.#}", oosNet), text_color=f_netcol(oosNet), text_size=size.tiny)
+
+    // ---- cost sweep ----
+    table.cell(an, 0, 5, "COST (rt %)", text_color=color.aqua, text_size=size.tiny)
+    table.cell(an, 1, 5, "PF",    text_color=color.aqua, text_size=size.tiny)
+    table.cell(an, 2, 5, "Net $", text_color=color.aqua, text_size=size.tiny)
+
+    grid = array.from(0.0, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50)
+    for j = 0 to array.size(grid) - 1
+        c   = array.get(grid, j)
+        pf  = pfAtCost(c)
+        nt  = netAtCost(c)
+        row = 6 + j
+        table.cell(an, 0, row, str.format("{0,number,#.##}", c), text_color=color.white, text_size=size.tiny)
+        table.cell(an, 1, row, na(pf)?"-":str.format("{0,number,#.##}", pf), text_color=f_pfcol(pf), text_size=size.tiny)
+        table.cell(an, 2, row, str.format("{0,number,#.#}", nt), text_color=f_netcol(nt), text_size=size.tiny)
+
+    // ---- breakeven row ----
+    beTxt = na(beCost) ? "n/a" : sumGross <= 0 ? "<0 (gross loss)" : str.format("{0,number,#.##}%", beCost)
+    table.cell(an, 0, 13, "PF=1.0 at", text_color=color.yellow, text_size=size.tiny)
+    table.cell(an, 1, 13, beTxt, text_color=color.yellow, text_size=size.tiny)
+    table.cell(an, 2, 13, "rt cost", text_color=color.gray, text_size=size.tiny)
+    table.cell(an, 0, 14, "Gross net $", text_color=color.white, text_size=size.tiny)
+    table.cell(an, 1, 14, str.format("{0,number,#.#}", sumGross), text_color=f_netcol(sumGross), text_size=size.tiny)
+    table.cell(an, 2, 14, "", text_size=size.tiny)
