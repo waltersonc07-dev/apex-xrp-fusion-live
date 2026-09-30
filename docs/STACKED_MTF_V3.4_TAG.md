@@ -44,3 +44,21 @@ Treat the tags as context, not a rule. On 2026-09-29 10:15 ET the tag read:
 2. In the Alerts panel, create a new alert. Condition: *XRP Stacked MTF v3.4-tag …* → **"alert() function calls only"**. Trigger: once per bar close.
    Webhook URL: the same Render `/webhook/alert` URL you use for v3.3, with the same secret mechanism. Message box: leave it; alert() supplies the JSON.
 3. Confirm one v3.4-tag alert arrives in Telegram and `/alerts/recent`. Then pause or delete the old v3.3 alert to avoid duplicate ENTRY/EXIT messages.
+
+## 2026-09-30 update: alert coverage + realistic costs (Claude review #2)
+
+Entry, exit and sizing logic are unchanged. Changes:
+
+- **Every exit path now sends an `alert()` EXIT JSON** in the existing format (`{"action":"EXIT","strategy":"StackedMTF_v3.4tag",...,"note":...}`):
+  - stack-flip exit, as before (note = exit mode, e.g. `Stack flip`)
+  - `L-Stop` fill, only when `useStop` is enabled (note `L-Stop filled @ <fill>`). It is detected from `strategy.closedtrades.exit_id`, and the alert goes out at the close of the fill bar.
+  - `flattenEnd` `close_all` at the window end (note `Window end — force-closed (flattenEnd)`). This alert is skipped if the signal exit already alerted on the same bar.
+  - A new `alertcondition` "Stacked MTF Exit (stop / window end)" was added. The existing alertconditions are unchanged.
+- The `endTime` default moved from 2026-12-31 to **2099-12-31**, so a live position is not force-closed silently in January 2027.
+- `strategy()` now uses **commission 0.1% per side (Binance spot taker, no BNB discount) and slippage 2 ticks**. The Strategy Tester headline is therefore net.
+  The analytics cost sweep adds the engine commission back (`closedtrades.profit + closedtrades.commission`), so the sweep stays gross + assumed cost. Slippage stays in the fill prices.
+- The entry filters from ideas #4 (near resistance + rejection) and #5 (inside 2H triangle) were **not added**. The backtests did not beat a random-skip null.
+  See `/workspace/analysis/claude_review_verify_2026-09-30.md` (research box).
+- `useStop` still defaults OFF. The sizing (`riskDist`) still assumes a stop distance that is not placed. This is documented, not changed.
+- The Render parser needs no change. The new EXIT payloads parse identically (`tests/test_v34_pine_alerts.py`).
+- Not compiled in TradingView (no TV access from here). Before relying on it, paste the script into the Pine Editor and check that it compiles.

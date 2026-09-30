@@ -21,13 +21,19 @@
 //     * 2H triangle/compression (last pivot highs descending AND pivot lows ascending)
 // - Extra JSON fields: res_state, res_level, res_atr2h, res_tf, rejection, triangle, tri_upper, tri_lower.
 // - Fix: exitShort is declared before the alert block (v3.3 referenced it before declaration).
+// - 2026-09-30 (Claude review #2, findings 2-3; entry/exit/sizing logic unchanged):
+//     * every exit path now emits an alert() EXIT JSON (same format): stack-flip exit (as before),
+//       L-Stop fill (only if useStop is enabled), flattenEnd close_all at the backtest window end
+//     * endTime default moved to 2099-12-31 so flattenEnd cannot silently flatten a live position
+//     * strategy() costs: commission 0.1%/side (Binance spot taker), slippage 2 ticks. The analytics
+//       table adds engine commission back so its "gross" cost sweep is not double counted.
 // Python reference: src/resistance_tag.py
 // ════════════════════════════════════════════════════════════════════════════
 
 strategy("XRP Stacked MTF v3.4-tag — long only (2H-sync re-arm + context tags)", overlay = true,
      initial_capital = 10000, currency = currency.USD,
-     commission_type = strategy.commission.percent, commission_value = 0.0,
-     slippage = 0, pyramiding = 0, calc_on_every_tick = false,
+     commission_type = strategy.commission.percent, commission_value = 0.1,
+     slippage = 2, pyramiding = 0, calc_on_every_tick = false,
      process_orders_on_close = true, default_qty_type = strategy.fixed)
 
 // ─────────────────────────────────────────────
@@ -35,7 +41,7 @@ strategy("XRP Stacked MTF v3.4-tag — long only (2H-sync re-arm + context tags)
 // ─────────────────────────────────────────────
 grpBT = "1 · Backtest window"
 startTime = input.time(timestamp("2023-01-01T00:00:00"), "Backtest start", group = grpBT)
-endTime = input.time(timestamp("2026-12-31T23:59:00"), "Backtest end", group = grpBT)
+endTime = input.time(timestamp("2099-12-31T23:59:00"), "Backtest end", group = grpBT)
 flattenEnd = input.bool(true, "Force-close any open trade at backtest end", group = grpBT)
 inRange = time >= startTime and time <= endTime
 
@@ -227,10 +233,25 @@ if strategy.position_size > 0
     if exitSig
         strategy.close("Long", comment = "exit signal")
 
-if flattenEnd and not inRange and strategy.position_size > 0
+windowExit = flattenEnd and not inRange and strategy.position_size > 0
+if windowExit
     strategy.close_all(comment = "window end")
 
 exitFired = strategy.position_size > 0 and exitSig
+// window-end alert only when the signal exit did not already alert on this bar
+windowExitAlert = windowExit and not exitFired
+
+// L-Stop fill detection (notify-only): a closed trade whose exit order id is "L-Stop".
+// Fills happen intrabar; the script sees them at the fill bar's close, so the alert is at that close.
+var int seenClosed = 0
+bool stopFilled = false
+float stopFillPx = na
+if strategy.closedtrades > seenClosed
+    for i = seenClosed to strategy.closedtrades - 1
+        if strategy.closedtrades.exit_id(i) == "L-Stop"
+            stopFilled := true
+            stopFillPx := strategy.closedtrades.exit_price(i)
+    seenClosed := strategy.closedtrades
 exitShort = exitMode == EX_STACK ? "Stack flip" : exitMode == EX_STFLIP ? "ST flip" : exitMode == EX_E21 ? "< EMA slow" : exitMode == EX_CROSS ? "EMA cross" : "Any line lost"
 
 // ════════════════════════════════════════════
@@ -381,15 +402,20 @@ if enterLong
     alert(useTags ? alertJsonX("ENTRY", "Long entry — 15m+2H stack synced | " + tagTxt, tagJson) : alertJson("ENTRY", "Long entry — 15m+2H stack synced"), alert.freq_once_per_bar_close)
 if exitFired
     alert(alertJson("EXIT", exitShort), alert.freq_once_per_bar_close)
+if stopFilled
+    alert(alertJson("EXIT", "L-Stop filled @ " + str.tostring(stopFillPx, format.mintick)), alert.freq_once_per_bar_close)
+if windowExitAlert
+    alert(alertJson("EXIT", "Window end — force-closed (flattenEnd)"), alert.freq_once_per_bar_close)
 if trailMoved
     alert(alertJson("TRAIL", "Stop trailed to " + str.tostring(stopLevel, format.mintick)), alert.freq_once_per_bar_close)
 
 alertcondition(enterLong, title = "Stacked MTF Long Entry", message = "ENTRY {{ticker}} @ {{close}}")
 alertcondition(exitFired, title = "Stacked MTF Exit", message = "EXIT {{ticker}} @ {{close}}")
+alertcondition(stopFilled or windowExitAlert, title = "Stacked MTF Exit (stop / window end)", message = "EXIT {{ticker}} @ {{close}} (stop or window end)")
 alertcondition(trailMoved, title = "Stacked MTF Trail", message = "TRAIL {{ticker}} stop update @ {{close}}")
 
 // ════════════════════════════════════════════
-// Trade capture (gross, because engine cost = 0)
+// Trade capture (gross: engine commission is added back; slippage stays in fill prices)
 // ════════════════════════════════════════════
 var array<float> tGross = array.new<float>()
 var array<float> tNotional = array.new<float>()
@@ -399,7 +425,7 @@ var float sumNotional = 0.0
 var int lastCount = 0
 if strategy.closedtrades > lastCount
     for i = lastCount to strategy.closedtrades - 1
-        g = strategy.closedtrades.profit(i)
+        g = strategy.closedtrades.profit(i) + strategy.closedtrades.commission(i)
         notl = strategy.closedtrades.entry_price(i) * math.abs(strategy.closedtrades.size(i))
         array.push(tGross, g)
         array.push(tNotional, notl)
@@ -579,5 +605,5 @@ if showAn and barstate.islast
     table.cell(an, 1, 16, str.format("{0,number,#.#}", sumGross), text_color = f_netcol(sumGross), text_size = size.tiny)
     table.cell(an, 2, 16, str.tostring(n) + " trades", text_color = color.white, text_size = size.tiny)
     table.cell(an, 0, 17, "Engine cost", text_color = color.gray, text_size = size.tiny)
-    table.cell(an, 1, 17, "0% (sweep is assumed)", text_color = color.gray, text_size = size.tiny)
+    table.cell(an, 1, 17, "0.1%/side + 2 ticks (sweep = gross + assumed)", text_color = color.gray, text_size = size.tiny)
     table.cell(an, 2, 17, "v3.4-tag 2H-sync", text_color = color.gray, text_size = size.tiny)
