@@ -1,0 +1,694 @@
+//@version=6
+// ════════════════════════════════════════════════════════════════════════════
+// XRP STACKED MTF — LONG ONLY — v3.5 TEST (v3.4-tag + C1 one-2H-close entry delay + macro warning)
+// TEST BUILD — notify-only. Alerts are tagged strategy "v3.5-test". No orders are sent anywhere.
+// APPLY TO THE 15-MINUTE CHART OF XRPUSDT. Confirmation timeframe = 2H (120).
+//
+// v3.3 vs v3.2:
+// - Still enter ONLY on the first 15m bar after a 2H close (fresh 2H, not stale).
+// - On that bar, enter if BOTH stacks are already up. v3.2 also demanded that
+//   the 15m stack *first flip true on that exact candle*, which skipped valid
+//   2H-open re-arms. freshOnly now defaults OFF.
+// - Price stop defaults OFF (written rule is stack flip, not fixed stop).
+// Everything else matches v3.2 structure for clean comparison.
+//
+// v3.4-tag vs v3.3 (2026-09-29 post-mortem):
+// - Entry / exit / sizing logic is IDENTICAL to v3.3. Tags never block or alter a trade.
+// - ENTRY alert note gets context tags, computed only from COMPLETED 2H/4H bars that are
+//   built on the chart from 15m bars (no request.security, no lookahead, confirmed pivots):
+//     * nearest overhead swing-high pivot (2H L/R=3, 4H L/R=2, 90 HTF-bar lookback),
+//       distance in ATR(12) of the last closed 2H bar -> "Near resistance" if <= 1.0 ATR2H
+//     * rejection-candle note when near (entry/prior 15m bar: upper wick > 2x body or CLV < 0.4)
+//     * 2H triangle/compression (last pivot highs descending AND pivot lows ascending)
+// - Extra JSON fields: res_state, res_level, res_atr2h, res_tf, rejection, triangle, tri_upper, tri_lower.
+// - Fix: exitShort is declared before the alert block (v3.3 referenced it before declaration).
+// - 2026-09-30 (Claude review #2, findings 2-3; entry/exit/sizing logic unchanged):
+//     * every exit path now emits an alert() EXIT JSON (same format): stack-flip exit (as before),
+//       L-Stop fill (only if useStop is enabled), flattenEnd close_all at the backtest window end
+//     * endTime default moved to 2099-12-31 so flattenEnd cannot silently flatten a live position
+//     * strategy() costs: commission 0.1%/side (Binance spot taker), slippage 2 ticks. The analytics
+//       table adds engine commission back so its "gross" cost sweep is not double counted.
+// v3.5 TEST vs v3.4-tag (2026-10-01):
+// - C1 "delay entry by one 2H close" (input useC1, default ON): enter at a fresh 2H open only if the
+//   long condition ALSO held at the previous 2H open. Python reference rule: analysis/book_methods/bm_lib.py
+//   F["prev2h_long"] (= long signal 8 x 15m bars earlier). Backtest: 774 -> 489 trades, PF 1.19 -> 1.42.
+// - Sizing unchanged (close - SuperTrend). ATR sizing was tested and rejected (claude_round3_2026-09-30.md).
+// - ENTRY alert note gets an informational '⚠ macro <24h' line when a US CPI / NFP / FOMC release is due
+//   within 24h (hardcoded UTC list, input group 11). It NEVER blocks or alters an entry.
+// - Distinct title and alert tag ("v3.5-test") so Render/Telegram show these as test alerts.
+// Python reference: src/resistance_tag.py (tags), analysis/book_methods (C1)
+// ════════════════════════════════════════════════════════════════════════════
+
+strategy("XRP Stacked MTF v3.5 TEST", "XRP v3.5 TEST", overlay = true,
+     initial_capital = 10000, currency = currency.USD,
+     commission_type = strategy.commission.percent, commission_value = 0.1,
+     slippage = 2, pyramiding = 0, calc_on_every_tick = false,
+     process_orders_on_close = true, default_qty_type = strategy.fixed)
+
+// ─────────────────────────────────────────────
+// 1 · Backtest window
+// ─────────────────────────────────────────────
+grpBT = "1 · Backtest window"
+startTime = input.time(timestamp("2023-01-01T00:00:00"), "Backtest start", group = grpBT)
+endTime = input.time(timestamp("2099-12-31T23:59:00"), "Backtest end", group = grpBT)
+flattenEnd = input.bool(true, "Force-close any open trade at backtest end", group = grpBT)
+inRange = time >= startTime and time <= endTime
+
+// ─────────────────────────────────────────────
+// 2 · Higher timeframe
+// ─────────────────────────────────────────────
+grpH = "2 · Higher timeframe"
+htfTF = input.timeframe("120", "Confirmation timeframe", group = grpH)
+requireHTF = input.bool(true, "Require the HTF stack for entry", group = grpH)
+useLiveHTF = input.bool(false, "Use live (forming) HTF bar — REPAINTS", group = grpH)
+requireSync = input.bool(true, "Only enter on the first 15m bar of a fresh 2H close", group = grpH)
+
+// ─────────────────────────────────────────────
+// 3 · Indicators
+// ─────────────────────────────────────────────
+grpI = "3 · Indicators"
+emaFast = input.int(9, "EMA fast length", minval = 2, group = grpI)
+emaSlow = input.int(21, "EMA slow length", minval = 3, group = grpI)
+demaLen = input.int(200, "DEMA length", minval = 5, group = grpI)
+stAtr = input.int(12, "SuperTrend ATR period", minval = 2, group = grpI)
+stMult = input.float(3.0, "SuperTrend multiplier", step = 0.1, group = grpI)
+
+// ─────────────────────────────────────────────
+// 4 · Stack definition
+// ─────────────────────────────────────────────
+grpS = "4 · Stack definition"
+useE9 = input.bool(true, "Include EMA fast in the stack", group = grpS)
+useE21 = input.bool(true, "Include EMA slow in the stack", group = grpS)
+useD200 = input.bool(true, "Include DEMA 200 in the stack", group = grpS)
+useST = input.bool(true, "Include SuperTrend in the stack", group = grpS)
+strictEntry = input.bool(false, "STRICT entry (candle LOW above every line)", group = grpS)
+strictExit = input.bool(false, "STRICT exit (candle HIGH below every line)", group = grpS)
+requireEmaOrder = input.bool(true, "Also require EMA fast > EMA slow to enter", group = grpS)
+
+// ─────────────────────────────────────────────
+// 5 · Entry
+// ─────────────────────────────────────────────
+grpE = "5 · Entry"
+freshOnly = input.bool(false, "Fresh entries only (bar the stack first forms) — OFF in v3.3", group = grpE)
+useC1 = input.bool(true, "C1: delay entry by one 2H close (long cond also at previous 2H open)", group = grpE)
+
+// ─────────────────────────────────────────────
+// 6 · Exit
+// ─────────────────────────────────────────────
+grpX = "6 · Exit"
+EX_STACK = "Full stack flip (all lines above candle)"
+EX_STFLIP = "SuperTrend flip"
+EX_E21 = "Close below EMA slow"
+EX_CROSS = "EMA fast crosses below EMA slow"
+EX_ANY = "Close below any selected indicator"
+exitMode = input.string(EX_STACK, "Exit mode", options = [EX_STACK, EX_STFLIP, EX_E21, EX_CROSS, EX_ANY], group = grpX)
+
+// ─────────────────────────────────────────────
+// 7 · Risk
+// ─────────────────────────────────────────────
+grpR = "7 · Risk"
+riskPercent = input.float(1.0, "Risk per trade % of equity", minval = 0.1, maxval = 5.0, step = 0.1, group = grpR)
+maxLev = input.float(1.0, "Max notional / equity (1.0 = spot, no leverage)", minval = 0.1, step = 0.5, group = grpR)
+useStop = input.bool(false, "Use protective stop — OFF in v3.3", group = grpR)
+trailST = input.bool(false, "Trail the stop up with SuperTrend", group = grpR)
+
+// ─────────────────────────────────────────────
+// 8 · Cost and IS/OOS analysis
+// ─────────────────────────────────────────────
+grpC = "8 · Cost & OOS analysis"
+splitDate = input.time(timestamp("2025-09-01T00:00:00"), "IS/OOS split (exits after = OOS)", group = grpC)
+assumeCostPct = input.float(0.20, "Assumed round-trip cost %", step = 0.01, minval = 0, group = grpC)
+
+// ─────────────────────────────────────────────
+// 9 · Display
+// ─────────────────────────────────────────────
+grpD = "9 · Display"
+showDash = input.bool(true, "Show dashboard", group = grpD)
+showAn = input.bool(true, "Show analytics", group = grpD)
+showSTline = input.bool(true, "Plot SuperTrend", group = grpD)
+
+// ─────────────────────────────────────────────
+// 10 · Entry context tags (NOTIFY-ONLY)
+// ─────────────────────────────────────────────
+grpT = "10 · Entry context tags (notify-only)"
+useTags = input.bool(true, "Append context tags to ENTRY alert", group = grpT)
+nearAtr = input.float(1.0, "Near-resistance threshold (x ATR 2H)", minval = 0.0, step = 0.05, group = grpT)
+tagAtrLen = input.int(12, "HTF ATR length for distance", minval = 2, group = grpT)
+pivL2 = input.int(3, "2H pivot left bars", minval = 1, group = grpT)
+pivR2 = input.int(3, "2H pivot right bars", minval = 1, group = grpT)
+pivL4 = input.int(2, "4H pivot left bars", minval = 1, group = grpT)
+pivR4 = input.int(2, "4H pivot right bars", minval = 1, group = grpT)
+pivLook = input.int(90, "Pivot lookback (HTF bars)", minval = 10, group = grpT)
+triPiv = input.int(2, "Triangle: pivots per side", minval = 2, maxval = 3, group = grpT)
+wickMult = input.float(2.0, "Rejection: upper wick > x body", minval = 0.5, step = 0.1, group = grpT)
+clvWeak = input.float(0.4, "Rejection: close-location below", minval = 0.0, maxval = 1.0, step = 0.05, group = grpT)
+plotRes = input.bool(true, "Plot nearest overhead resistance / triangle lines", group = grpT)
+
+// ─────────────────────────────────────────────
+// 11 · Macro warning (NOTIFY-ONLY, never filters)
+// ─────────────────────────────────────────────
+// Times are UTC, "LABEL@YYYY-MM-DDTHH:MM", comma-separated. Sources (checked 2026-10-01):
+//   CPI  : https://www.bls.gov/schedule/news_release/cpi.htm     (08:30 ET)
+//   NFP  : https://www.bls.gov/schedule/news_release/empsit.htm  (Employment Situation, 08:30 ET)
+//   FOMC : https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm (statement 2:00 p.m. ET,
+//          last day of meeting; 2027 dates are tentative per the Fed until confirmed at the prior meeting)
+// BLS has NOT yet published 2027 CPI / Employment Situation dates, so none are listed (no guessing).
+// ET->UTC: EDT (UTC-4) until 2026-11-01 and from 2027-03-14 to 2027-11-07; EST (UTC-5) otherwise.
+grpM = "11 · Macro warning (notify-only)"
+useMacro = input.bool(true, "Add '⚠ macro <24h' line to ENTRY alert", group = grpM)
+macroAheadH = input.float(24.0, "Warn if a release is due within (hours)", minval = 0.5, step = 0.5, group = grpM)
+macroEvents = input.string("NFP@2026-10-02T12:30,CPI@2026-10-14T12:30,FOMC@2026-10-28T18:00,NFP@2026-11-06T13:30,CPI@2026-11-10T13:30,NFP@2026-12-04T13:30,FOMC@2026-12-09T19:00,CPI@2026-12-10T13:30,FOMC@2027-01-27T19:00,FOMC@2027-03-17T18:00,FOMC@2027-04-28T18:00,FOMC@2027-06-09T18:00,FOMC@2027-07-28T18:00,FOMC@2027-09-15T18:00,FOMC@2027-10-27T18:00,FOMC@2027-12-08T19:00", "US macro releases (UTC, LABEL@YYYY-MM-DDTHH:MM, comma-separated)", group = grpM)
+
+// ════════════════════════════════════════════
+// Indicator engine
+// ════════════════════════════════════════════
+dema(src, len) =>
+    e1 = ta.ema(src, len)
+    2 * e1 - ta.ema(e1, len)
+
+f_up() =>
+    e9 = ta.ema(close, emaFast)
+    e21 = ta.ema(close, emaSlow)
+    d200 = dema(close, demaLen)
+    [sl, sd] = ta.supertrend(stMult, stAtr)
+    r = strictEntry ? low : close
+    c1 = not useE9 or r > e9
+    c2 = not useE21 or r > e21
+    c3 = not useD200 or r > d200
+    c4 = not useST or (r > sl and sd < 0)
+    c5 = not requireEmaOrder or e9 > e21
+    c1 and c2 and c3 and c4 and c5
+
+f_dn() =>
+    e9 = ta.ema(close, emaFast)
+    e21 = ta.ema(close, emaSlow)
+    d200 = dema(close, demaLen)
+    [sl, sd] = ta.supertrend(stMult, stAtr)
+    r = strictExit ? high : close
+    c1 = not useE9 or r < e9
+    c2 = not useE21 or r < e21
+    c3 = not useD200 or r < d200
+    c4 = not useST or (r < sl and sd > 0)
+    c1 and c2 and c3 and c4
+
+f_upPrev() =>
+    v = f_up()
+    v[1]
+
+f_dnPrev() =>
+    v = f_dn()
+    v[1]
+
+ema9 = ta.ema(close, emaFast)
+ema21 = ta.ema(close, emaSlow)
+dema200 = dema(close, demaLen)
+[stLine, stDir] = ta.supertrend(stMult, stAtr)
+atrVal = ta.atr(stAtr)
+stackUp = f_up()
+stackDn = f_dn()
+
+htfUpConf = request.security(syminfo.tickerid, htfTF, f_upPrev(), lookahead = barmerge.lookahead_on)
+htfDnConf = request.security(syminfo.tickerid, htfTF, f_dnPrev(), lookahead = barmerge.lookahead_on)
+htfUpLive = request.security(syminfo.tickerid, htfTF, f_up(), lookahead = barmerge.lookahead_off)
+htfDnLive = request.security(syminfo.tickerid, htfTF, f_dn(), lookahead = barmerge.lookahead_off)
+htfUp = useLiveHTF ? htfUpLive : htfUpConf
+htfDn = useLiveHTF ? htfDnLive : htfDnConf
+
+is2hOpen = ta.change(time(htfTF)) != 0
+anySelected = useE9 or useE21 or useD200 or useST
+
+// ════════════════════════════════════════════
+// Entry and exit logic — LONG ONLY
+// ════════════════════════════════════════════
+flat = strategy.position_size == 0
+htfOK = requireHTF ? htfUp : true
+longCond = anySelected and htfOK and stackUp
+entryTrig = freshOnly ? (longCond and not longCond[1]) : longCond
+syncOK = requireSync ? is2hOpen : true
+// C1 (v3.5): prevSyncLong = longCond as it stood at the PREVIOUS 2H-open bar (see the update block below).
+var bool prevSyncLong = false
+delayOK = useC1 ? prevSyncLong : true
+enterLong = inRange and flat and entryTrig and syncOK and delayOK
+
+// ╔══════════════════════════════════════════════════════════════════════════════════════════╗
+// ║ !!! LOAD-BEARING ORDER — DO NOT MOVE THIS BLOCK ABOVE `enterLong` / `delayOK` !!!          ║
+// ║ Pine runs top-to-bottom once per bar. `delayOK` above must read prevSyncLong as it stood   ║
+// ║ BEFORE this bar's update, i.e. longCond at the previous 2H-open bar. enterLong can only be ║
+// ║ true on is2hOpen bars (requireSync), and this block overwrites prevSyncLong on exactly     ║
+// ║ those bars. If it is moved above enterLong, C1 silently degenerates to "longCond true     ║
+// ║ once" (= no delay at all) with NO compile error. (Claude review #3, 2026-09-30.)           ║
+// ║ NOTE: prevSyncLong stores longCond, NOT entryTrig. With freshOnly = false (default) they   ║
+// ║ are identical; if freshOnly is ever turned ON, C1's meaning changes (it would still check  ║
+// ║ "stack up at the previous 2H open", not "a fresh trigger fired there"). Re-validate then.  ║
+// ║ It updates on every 2H open regardless of position (matches the Python rule lg[i-8]).      ║
+// ╚══════════════════════════════════════════════════════════════════════════════════════════╝
+if is2hOpen
+    prevSyncLong := longCond
+
+flipSell = stDir > 0 and stDir[1] < 0
+lost1 = useE9 and close < ema9
+lost2 = useE21 and close < ema21
+lost3 = useD200 and close < dema200
+lost4 = useST and close < stLine
+anyLost = lost1 or lost2 or lost3 or lost4
+exitSig = exitMode == EX_STACK ? stackDn : exitMode == EX_STFLIP ? flipSell : exitMode == EX_E21 ? close < ema21 : exitMode == EX_CROSS ? ta.crossunder(ema9, ema21) : anyLost
+
+rawRisk = close - stLine
+riskDist = rawRisk > syminfo.mintick ? rawRisk : atrVal * stMult
+
+sizeFor(rd) =>
+    raw = rd > 0 ? (strategy.equity * riskPercent / 100.0) / rd : 0.0
+    cap = close > 0 ? (strategy.equity * maxLev) / close : raw
+    math.min(raw, cap)
+
+var float stopLevel = na
+if enterLong
+    q = sizeFor(riskDist)
+    if q > 0
+        strategy.entry("Long", strategy.long, qty = q)
+        stopLevel := close - riskDist
+
+if strategy.position_size > 0
+    if useStop
+        if trailST and stDir < 0 and not na(stopLevel)
+            stopLevel := math.max(stopLevel, stLine)
+        strategy.exit("L-Stop", from_entry = "Long", stop = stopLevel)
+    if exitSig
+        strategy.close("Long", comment = "exit signal")
+
+windowExit = flattenEnd and not inRange and strategy.position_size > 0
+if windowExit
+    strategy.close_all(comment = "window end")
+
+exitFired = strategy.position_size > 0 and exitSig
+// window-end alert only when the signal exit did not already alert on this bar
+windowExitAlert = windowExit and not exitFired
+
+// L-Stop fill detection (notify-only): a closed trade whose exit order id is "L-Stop".
+// Fills happen intrabar; the script sees them at the fill bar's close, so the alert is at that close.
+var int seenClosed = 0
+bool stopFilled = false
+float stopFillPx = na
+if strategy.closedtrades > seenClosed
+    for i = seenClosed to strategy.closedtrades - 1
+        if strategy.closedtrades.exit_id(i) == "L-Stop"
+            stopFilled := true
+            stopFillPx := strategy.closedtrades.exit_price(i)
+    seenClosed := strategy.closedtrades
+exitShort = exitMode == EX_STACK ? "Stack flip" : exitMode == EX_STFLIP ? "ST flip" : exitMode == EX_E21 ? "< EMA slow" : exitMode == EX_CROSS ? "EMA cross" : "Any line lost"
+
+// ════════════════════════════════════════════
+// Entry context tags — NOTIFY-ONLY (never used by entry/exit logic)
+// HTF bars are assembled from chart bars; a bar is used only after it has COMPLETED.
+// At the first 15m bar of HTF bar k, pivots are those confirmed by bars <= k-1.
+// ════════════════════════════════════════════
+f_htf(tf, L, R, look, atrLen) =>
+    var float cH = na
+    var float cL = na
+    var float cC = na
+    var float pC = na
+    var float atrR = na
+    var float trSum = 0.0
+    var int trN = 0
+    var int nDone = 0
+    var array<float> hs = array.new<float>()
+    var array<float> ls = array.new<float>()
+    var array<float> phV = array.new<float>()
+    var array<int> phI = array.new<int>()
+    var array<float> plV = array.new<float>()
+    var array<int> plI = array.new<int>()
+    bool newBar = ta.change(time(tf)) != 0
+    if newBar and not na(cC)
+        float tr = na(pC) ? cH - cL : math.max(cH - cL, math.abs(cH - pC), math.abs(cL - pC))
+        if trN < atrLen
+            trSum += tr
+            trN += 1
+            if trN == atrLen
+                atrR := trSum / atrLen
+        else
+            atrR := (atrR * (atrLen - 1) + tr) / atrLen
+        pC := cC
+        array.push(hs, cH)
+        array.push(ls, cL)
+        if array.size(hs) > L + R + 1
+            array.shift(hs)
+            array.shift(ls)
+        nDone += 1
+        if array.size(hs) == L + R + 1
+            float ch = array.get(hs, L)
+            float cl = array.get(ls, L)
+            bool isPH = true
+            bool isPL = true
+            for m = 0 to L + R
+                if m < L
+                    isPH := isPH and array.get(hs, m) < ch
+                    isPL := isPL and array.get(ls, m) > cl
+                else if m > L
+                    isPH := isPH and array.get(hs, m) <= ch
+                    isPL := isPL and array.get(ls, m) >= cl
+            int j = nDone - 1 - R
+            if isPH
+                array.push(phV, ch)
+                array.push(phI, j)
+            if isPL
+                array.push(plV, cl)
+                array.push(plI, j)
+        while array.size(phI) > 0 and nDone - array.get(phI, 0) > look
+            array.shift(phI)
+            array.shift(phV)
+        while array.size(plI) > 0 and nDone - array.get(plI, 0) > look
+            array.shift(plI)
+            array.shift(plV)
+    if newBar or na(cH)
+        cH := high
+        cL := low
+        cC := close
+    else
+        cH := math.max(cH, high)
+        cL := math.min(cL, low)
+        cC := close
+    [phV, phI, plV, plI, atrR, nDone]
+
+f_nearAbove(arr, px) =>
+    float best = na
+    if array.size(arr) > 0
+        for v in arr
+            if v > px and (na(best) or v < best)
+                best := v
+    best
+
+f_tri(phV, phI, plV, plI, k, n, px) =>
+    float up = na
+    float lo = na
+    bool inside = false
+    int nh = array.size(phV)
+    int nl = array.size(plV)
+    if nh >= n and nl >= n
+        bool desc = true
+        bool asc = true
+        for m = 1 to n - 1
+            desc := desc and array.get(phV, nh - n + m) < array.get(phV, nh - n + m - 1)
+            asc := asc and array.get(plV, nl - n + m) > array.get(plV, nl - n + m - 1)
+        if desc and asc
+            float h1 = array.get(phV, nh - 2)
+            float h2 = array.get(phV, nh - 1)
+            int j1 = array.get(phI, nh - 2)
+            int j2 = array.get(phI, nh - 1)
+            float l1 = array.get(plV, nl - 2)
+            float l2 = array.get(plV, nl - 1)
+            int i1 = array.get(plI, nl - 2)
+            int i2 = array.get(plI, nl - 1)
+            up := h2 + (h2 - h1) / (j2 - j1) * (k - j2)
+            lo := l2 + (l2 - l1) / (i2 - i1) * (k - i2)
+            inside := up > lo and px >= lo and px <= up
+    [inside, up, lo]
+
+f_rej(o, h, l, c) =>
+    float body = math.abs(c - o)
+    float uw = h - math.max(o, c)
+    float rng = h - l
+    float clv = rng > 0 ? (c - l) / rng : 0.5
+    uw > wickMult * body or clv < clvWeak
+
+f_num(x, fmt) =>
+    na(x) ? "null" : str.tostring(x, fmt)
+
+[ph2V, ph2I, pl2V, pl2I, atr2h, k2] = f_htf("120", pivL2, pivR2, pivLook, tagAtrLen)
+[ph4V, ph4I, pl4V, pl4I, atr4h, k4] = f_htf("240", pivL4, pivR4, pivLook, tagAtrLen)
+res2 = f_nearAbove(ph2V, close)
+res4 = f_nearAbove(ph4V, close)
+resLvl = na(res2) ? res4 : na(res4) ? res2 : math.min(res2, res4)
+resTf = na(resLvl) ? "" : (not na(res2) and resLvl == res2) ? "2H" : "4H"
+resDist = na(resLvl) or na(atr2h) or atr2h <= 0 ? na : (resLvl - close) / atr2h
+resState = na(atr2h) ? "NA" : na(resLvl) ? "NONE" : resDist <= nearAtr ? "NEAR" : "CLEAR"
+[triIn, triUp, triLo] = f_tri(ph2V, ph2I, pl2V, pl2I, k2, triPiv, close)
+rejNow = f_rej(open, high, low, close) or f_rej(open[1], high[1], low[1], close[1])
+rejFlag = resState == "NEAR" and rejNow
+
+resTxt = resState == "NEAR" ? "⚠️ Near resistance " + str.tostring(resLvl, format.mintick) + " (+" + str.tostring(resDist, "0.00") + " ATR2H, " + resTf + ")" + (rejNow ? " | rejection candle" : "") : resState == "CLEAR" ? "✅ Clear to next resistance " + str.tostring(resLvl, format.mintick) + " (+" + str.tostring(resDist, "0.00") + " ATR2H, " + resTf + ")" : resState == "NONE" ? "✅ No swing-high resistance in lookback" : "resistance n/a (warm-up)"
+triTxt = triIn ? " | Inside triangle — wait for 2H breakout close (upper " + str.tostring(triUp, format.mintick) + " / lower " + str.tostring(triLo, format.mintick) + ")" : ""
+tagTxt = resTxt + triTxt
+tagJson = ',"res_state":"' + resState + '","res_level":' + f_num(resLvl, format.mintick) + ',"res_atr2h":' + f_num(resDist, "0.000") + ',"res_tf":"' + resTf + '","rejection":' + (rejFlag ? "true" : "false") + ',"triangle":' + (triIn ? "true" : "false") + ',"tri_upper":' + (triIn ? f_num(triUp, format.mintick) : "null") + ',"tri_lower":' + (triIn ? f_num(triLo, format.mintick) : "null")
+
+// ════════════════════════════════════════════
+// Macro warning — NOTIFY-ONLY (text only; never used by entry/exit/sizing)
+// ════════════════════════════════════════════
+f_int(s) =>
+    float v = str.tonumber(s)
+    na(v) ? -1 : int(v)
+
+var array<int> evT = array.new<int>()
+var array<string> evL = array.new<string>()
+if barstate.isfirst
+    for item in str.split(str.replace_all(macroEvents, " ", ""), ",")
+        parts = str.split(item, "@")
+        if array.size(parts) == 2
+            d = array.get(parts, 1)
+            if str.length(d) == 16
+                y = f_int(str.substring(d, 0, 4))
+                mo = f_int(str.substring(d, 5, 7))
+                dd = f_int(str.substring(d, 8, 10))
+                hh = f_int(str.substring(d, 11, 13))
+                mi = f_int(str.substring(d, 14, 16))
+                if y > 2000 and mo >= 1 and mo <= 12 and dd >= 1 and dd <= 31 and hh >= 0 and hh <= 23 and mi >= 0 and mi <= 59
+                    array.push(evT, timestamp("UTC", y, mo, dd, hh, mi, 0))
+                    array.push(evL, array.get(parts, 0))
+
+f_macro(tNow, aheadMs) =>
+    string txt = ""
+    for [i, t] in evT
+        float dt = t - tNow
+        if dt >= 0 and dt <= aheadMs
+            txt := txt + (txt == "" ? "" : ", ") + array.get(evL, i) + " in " + str.tostring(dt / 3600000.0, "0.0") + "h (" + str.format_time(t, "MMM dd HH:mm", "America/New_York") + " ET)"
+    txt
+
+macroList = useMacro ? f_macro(time_close, macroAheadH * 3600000.0) : ""
+macroHit = macroList != ""
+// JSON-escaped newline (\\n -> \n inside the JSON string) so Telegram shows it as its own line
+macroTxt = macroHit ? "\\n⚠ macro <" + str.tostring(macroAheadH, "#.#") + "h: " + macroList : ""
+
+// ════════════════════════════════════════════
+// Alerts (notify-only — wire webhook in TradingView)
+// ════════════════════════════════════════════
+trailMoved = strategy.position_size > 0 and useStop and trailST and not na(stopLevel) and not na(stopLevel[1]) and stopLevel > stopLevel[1]
+
+alertJsonX(action, note, extra) =>
+    '{"action":"' + action + '","strategy":"v3.5-test","symbol":"' + syminfo.ticker + '","tf":"' + timeframe.period + '","price":' + str.tostring(close, format.mintick) + ',"note":"' + note + '"' + extra + '}'
+
+alertJson(action, note) =>
+    alertJsonX(action, note, "")
+
+if enterLong
+    entryNote = "[v3.5 TEST] Long entry — 15m+2H stack synced, C1 " + (useC1 ? "held 2 x 2H opens" : "off")
+    alert(useTags ? alertJsonX("ENTRY", entryNote + " | " + tagTxt + macroTxt, tagJson) : alertJson("ENTRY", entryNote + macroTxt), alert.freq_once_per_bar_close)
+if exitFired
+    alert(alertJson("EXIT", exitShort), alert.freq_once_per_bar_close)
+if stopFilled
+    alert(alertJson("EXIT", "L-Stop filled @ " + str.tostring(stopFillPx, format.mintick)), alert.freq_once_per_bar_close)
+if windowExitAlert
+    alert(alertJson("EXIT", "Window end — force-closed (flattenEnd)"), alert.freq_once_per_bar_close)
+if trailMoved
+    alert(alertJson("TRAIL", "Stop trailed to " + str.tostring(stopLevel, format.mintick)), alert.freq_once_per_bar_close)
+
+alertcondition(enterLong, title = "v3.5 TEST Long Entry", message = "v3.5-test ENTRY {{ticker}} @ {{close}}")
+alertcondition(exitFired, title = "v3.5 TEST Exit", message = "v3.5-test EXIT {{ticker}} @ {{close}}")
+alertcondition(stopFilled or windowExitAlert, title = "v3.5 TEST Exit (stop / window end)", message = "v3.5-test EXIT {{ticker}} @ {{close}} (stop or window end)")
+alertcondition(trailMoved, title = "v3.5 TEST Trail", message = "v3.5-test TRAIL {{ticker}} stop update @ {{close}}")
+
+// ════════════════════════════════════════════
+// Trade capture (gross: engine commission is added back; slippage stays in fill prices)
+// ════════════════════════════════════════════
+var array<float> tGross = array.new<float>()
+var array<float> tNotional = array.new<float>()
+var array<int> tExit = array.new<int>()
+var float sumGross = 0.0
+var float sumNotional = 0.0
+var int lastCount = 0
+if strategy.closedtrades > lastCount
+    for i = lastCount to strategy.closedtrades - 1
+        g = strategy.closedtrades.profit(i) + strategy.closedtrades.commission(i)
+        notl = strategy.closedtrades.entry_price(i) * math.abs(strategy.closedtrades.size(i))
+        array.push(tGross, g)
+        array.push(tNotional, notl)
+        array.push(tExit, strategy.closedtrades.exit_time(i))
+        sumGross := sumGross + g
+        sumNotional := sumNotional + notl
+    lastCount := strategy.closedtrades
+
+pfAtCost(costPct) =>
+    float gp = 0.0
+    float gl = 0.0
+    int n = array.size(tGross)
+    if n > 0
+        for i = 0 to n - 1
+            net = array.get(tGross, i) - array.get(tNotional, i) * costPct / 100.0
+            if net >= 0
+                gp := gp + net
+            else
+                gl := gl - net
+    gl > 0 ? gp / gl : na
+
+netAtCost(costPct) =>
+    sumGross - costPct / 100.0 * sumNotional
+
+// ════════════════════════════════════════════
+// Plots
+// ════════════════════════════════════════════
+plot(useE9 ? ema9 : na, "EMA fast", color = color.new(color.aqua, 0))
+plot(useE21 ? ema21 : na, "EMA slow", color = color.new(color.orange, 0))
+plot(useD200 ? dema200 : na, "DEMA 200", color = color.new(color.fuchsia, 0), linewidth = 2)
+plot(showSTline and useST ? stLine : na, "SuperTrend", color = stDir < 0 ? color.green : color.red, linewidth = 2, style = plot.style_linebr)
+bgcolor(htfUp ? color.new(color.green, 92) : htfDn ? color.new(color.red, 94) : na, title = "HTF stack")
+plotshape(enterLong, "Long entry", shape.triangleup, location.belowbar, color.lime, size = size.small, text = "L")
+plotshape(exitFired, "Exit", shape.xcross, location.abovebar, color.white, size = size.tiny)
+plot(useTags and plotRes ? resLvl : na, "Nearest overhead resistance (2H/4H pivot)", color = color.new(color.orange, 0), linewidth = 1, style = plot.style_linebr)
+plot(useTags and plotRes and triIn ? triUp : na, "Triangle upper (2H)", color = color.new(color.yellow, 30), style = plot.style_linebr)
+plot(useTags and plotRes and triIn ? triLo : na, "Triangle lower (2H)", color = color.new(color.yellow, 30), style = plot.style_linebr)
+plotshape(enterLong and useTags and resState == "NEAR", "Entry near resistance", shape.diamond, location.abovebar, color.orange, size = size.tiny)
+
+// ════════════════════════════════════════════
+// Dashboard
+// ════════════════════════════════════════════
+blocker = not anySelected ? "NO INDICATORS" : not flat ? "IN TRADE" : not inRange ? "OUT OF WINDOW" : (requireHTF and not htfUp) ? "BLOCKED: 2H stack" : not stackUp ? "BLOCKED: 15m stack" : (requireSync and not is2hOpen) ? "WAIT: 2H not fresh" : (useC1 and not delayOK) ? "WAIT: C1 (needs 2nd 2H open)" : "READY"
+blockerCol = blocker == "READY" ? color.lime : blocker == "IN TRADE" ? color.aqua : color.gray
+htfTxt = htfUp ? "BULL" : htfDn ? "BEAR" : "MIXED"
+htfCol = htfUp ? color.lime : htfDn ? color.red : color.gray
+ltfTxt = stackUp ? "BULL" : stackDn ? "BEAR" : "MIXED"
+ltfCol = stackUp ? color.lime : stackDn ? color.red : color.gray
+posTxt = strategy.position_size > 0 ? "LONG" : "FLAT"
+posCol = strategy.position_size > 0 ? color.lime : color.gray
+modeTxt = (strictEntry ? "strict in" : "loose in") + " / " + (strictExit ? "strict out" : "loose out")
+srcTxt = useLiveHTF ? "LIVE (repaints)" : "CLOSED bar"
+srcCol = useLiveHTF ? color.red : color.lime
+syncTxt = requireSync ? (is2hOpen ? "FRESH now" : "waiting") : "off"
+syncCol = requireSync ? (is2hOpen ? color.lime : color.gray) : color.gray
+
+var table dash = table.new(position.top_right, 2, 13, bgcolor = color.new(color.black, 80), border_width = 1)
+if showDash and barstate.islast
+    table.cell(dash, 0, 0, "XRP STACK v3.5 TEST — 2H-SYNC + C1", text_color = color.yellow, text_size = size.small)
+    table.cell(dash, 1, 0, "", text_size = size.small)
+    table.cell(dash, 0, 1, htfTF + " stack", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 1, htfTxt, text_color = htfCol, text_size = size.tiny)
+    table.cell(dash, 0, 2, "15m stack", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 2, ltfTxt, text_color = ltfCol, text_size = size.tiny)
+    table.cell(dash, 0, 3, "2H sync", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 3, syncTxt, text_color = syncCol, text_size = size.tiny)
+    table.cell(dash, 0, 4, "Position", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 4, posTxt, text_color = posCol, text_size = size.tiny)
+    table.cell(dash, 0, 5, "Blocker", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 5, blocker, text_color = blockerCol, text_size = size.tiny)
+    table.cell(dash, 0, 6, "Exit mode", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 6, exitShort, text_color = color.aqua, text_size = size.tiny)
+    table.cell(dash, 0, 7, "Stack mode", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 7, modeTxt, text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 0, 8, "HTF source", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 8, srcTxt, text_color = srcCol, text_size = size.tiny)
+    table.cell(dash, 0, 9, "Closed trades", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 9, str.tostring(strategy.closedtrades), text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 0, 10, "Resistance", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 10, resState + (na(resDist) ? "" : " +" + str.tostring(resDist, "0.00") + " ATR2H") + (triIn ? " | TRI" : ""), text_color = resState == "NEAR" ? color.orange : color.lime, text_size = size.tiny)
+    table.cell(dash, 0, 11, "C1 armed (next 2H open)", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 11, useC1 ? (prevSyncLong ? "YES" : "no") : "off", text_color = useC1 and prevSyncLong ? color.lime : color.gray, text_size = size.tiny)
+    table.cell(dash, 0, 12, "Macro <" + str.tostring(macroAheadH, "#.#") + "h", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 12, macroHit ? macroList : "none (" + str.tostring(array.size(evT)) + " events loaded)", text_color = macroHit ? color.orange : color.gray, text_size = size.tiny)
+
+// ════════════════════════════════════════════
+// Analytics — IS/OOS split and cost sweep
+// ════════════════════════════════════════════
+var table an = table.new(position.top_left, 3, 18, bgcolor = color.new(color.black, 85), border_width = 1)
+f_pfcol(v) => na(v) ? color.gray : v >= 1 ? color.lime : color.red
+f_netcol(v) => v >= 0 ? color.lime : color.red
+
+if showAn and barstate.islast
+    float isGP = 0.0
+    float isGL = 0.0
+    float isNet = 0.0
+    float isCum = 0.0
+    float isPeak = 0.0
+    float isDD = 0.0
+    float oosGP = 0.0
+    float oosGL = 0.0
+    float oosNet = 0.0
+    float oosCum = 0.0
+    float oosPeak = 0.0
+    float oosDD = 0.0
+    int isN = 0
+    int isW = 0
+    int oosN = 0
+    int oosW = 0
+    int n = array.size(tGross)
+    if n > 0
+        for i = 0 to n - 1
+            net = array.get(tGross, i) - array.get(tNotional, i) * assumeCostPct / 100.0
+            if array.get(tExit, i) >= splitDate
+                oosN := oosN + 1
+                oosNet := oosNet + net
+                oosCum := oosCum + net
+                oosPeak := math.max(oosPeak, oosCum)
+                oosDD := math.max(oosDD, oosPeak - oosCum)
+                if net >= 0
+                    oosGP := oosGP + net
+                    oosW := oosW + 1
+                else
+                    oosGL := oosGL - net
+            else
+                isN := isN + 1
+                isNet := isNet + net
+                isCum := isCum + net
+                isPeak := math.max(isPeak, isCum)
+                isDD := math.max(isDD, isPeak - isCum)
+                if net >= 0
+                    isGP := isGP + net
+                    isW := isW + 1
+                else
+                    isGL := isGL - net
+    isPF = isGL > 0 ? isGP / isGL : na
+    oosPF = oosGL > 0 ? oosGP / oosGL : na
+    isWR = isN > 0 ? 100.0 * isW / isN : na
+    oosWR = oosN > 0 ? 100.0 * oosW / oosN : na
+    isAvg = isN > 0 ? isNet / isN : na
+    oosAvg = oosN > 0 ? oosNet / oosN : na
+    beCost = sumNotional > 0 ? 100.0 * sumGross / sumNotional : na
+    hdr = "NET OF " + str.format("{0,number,#.##}", assumeCostPct) + "%"
+    table.cell(an, 0, 0, hdr, text_color = color.aqua, text_size = size.tiny)
+    table.cell(an, 1, 0, "IN-SAMPLE", text_color = color.aqua, text_size = size.tiny)
+    table.cell(an, 2, 0, "OUT-SAMPLE", text_color = color.aqua, text_size = size.tiny)
+    table.cell(an, 0, 1, "Trades", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 1, 1, str.tostring(isN), text_color = color.white, text_size = size.tiny)
+    table.cell(an, 2, 1, str.tostring(oosN), text_color = color.white, text_size = size.tiny)
+    table.cell(an, 0, 2, "Win %", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 1, 2, na(isWR) ? "-" : str.format("{0,number,#.#}", isWR), text_color = color.white, text_size = size.tiny)
+    table.cell(an, 2, 2, na(oosWR) ? "-" : str.format("{0,number,#.#}", oosWR), text_color = color.white, text_size = size.tiny)
+    table.cell(an, 0, 3, "Profit factor", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 1, 3, na(isPF) ? "-" : str.format("{0,number,#.##}", isPF), text_color = f_pfcol(isPF), text_size = size.tiny)
+    table.cell(an, 2, 3, na(oosPF) ? "-" : str.format("{0,number,#.##}", oosPF), text_color = f_pfcol(oosPF), text_size = size.tiny)
+    table.cell(an, 0, 4, "Net $", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 1, 4, str.format("{0,number,#.#}", isNet), text_color = f_netcol(isNet), text_size = size.tiny)
+    table.cell(an, 2, 4, str.format("{0,number,#.#}", oosNet), text_color = f_netcol(oosNet), text_size = size.tiny)
+    table.cell(an, 0, 5, "Avg trade $", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 1, 5, na(isAvg) ? "-" : str.format("{0,number,#.##}", isAvg), text_color = f_netcol(nz(isAvg)), text_size = size.tiny)
+    table.cell(an, 2, 5, na(oosAvg) ? "-" : str.format("{0,number,#.##}", oosAvg), text_color = f_netcol(nz(oosAvg)), text_size = size.tiny)
+    table.cell(an, 0, 6, "Closed-trade DD $", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 1, 6, str.format("{0,number,#.#}", isDD), text_color = color.orange, text_size = size.tiny)
+    table.cell(an, 2, 6, str.format("{0,number,#.#}", oosDD), text_color = color.orange, text_size = size.tiny)
+    table.cell(an, 0, 7, "COST SWEEP (rt %)", text_color = color.aqua, text_size = size.tiny)
+    table.cell(an, 1, 7, "PF", text_color = color.aqua, text_size = size.tiny)
+    table.cell(an, 2, 7, "Net $", text_color = color.aqua, text_size = size.tiny)
+    grid = array.from(0.0, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50)
+    for j = 0 to array.size(grid) - 1
+        c = array.get(grid, j)
+        pf = pfAtCost(c)
+        nt = netAtCost(c)
+        row = 8 + j
+        table.cell(an, 0, row, str.format("{0,number,#.##}", c), text_color = color.white, text_size = size.tiny)
+        table.cell(an, 1, row, na(pf) ? "-" : str.format("{0,number,#.##}", pf), text_color = f_pfcol(pf), text_size = size.tiny)
+        table.cell(an, 2, row, str.format("{0,number,#.#}", nt), text_color = f_netcol(nt), text_size = size.tiny)
+    table.cell(an, 0, 15, "BE cost %", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 1, 15, na(beCost) ? "-" : str.format("{0,number,#.##}", beCost), text_color = color.yellow, text_size = size.tiny)
+    table.cell(an, 2, 15, "gross/notional", text_color = color.gray, text_size = size.tiny)
+    table.cell(an, 0, 16, "Gross $", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 1, 16, str.format("{0,number,#.#}", sumGross), text_color = f_netcol(sumGross), text_size = size.tiny)
+    table.cell(an, 2, 16, str.tostring(n) + " trades", text_color = color.white, text_size = size.tiny)
+    table.cell(an, 0, 17, "Engine cost", text_color = color.gray, text_size = size.tiny)
+    table.cell(an, 1, 17, "0.1%/side + 2 ticks (sweep = gross + assumed)", text_color = color.gray, text_size = size.tiny)
+    table.cell(an, 2, 17, "v3.5 TEST 2H-sync + C1", text_color = color.gray, text_size = size.tiny)
