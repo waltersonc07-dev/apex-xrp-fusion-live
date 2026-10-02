@@ -101,7 +101,7 @@ def test_macro_window_mirror():
 def test_macro_is_entry_only_and_informational():
     uses = [ln for ln in PINE.splitlines() if "macroTxt" in ln and not ln.lstrip().startswith("//")]
     assert len(uses) == 2 and uses[0].startswith("macroTxt = ")
-    assert 'alertJsonX("ENTRY"' in uses[1] and 'alertJson("ENTRY"' in uses[1]
+    assert uses[1].lstrip().startswith('alert(useTags ? alertJsonX("ENTRY"') and uses[1].count("macroTxt") == 2  # both branches
     for name in ("macroHit", "macroList"):                           # never feeds entry/exit/sizing
         for ln in PINE.splitlines():
             if name in ln and ("enterLong =" in ln or "exitSig =" in ln or "sizeFor" in ln):

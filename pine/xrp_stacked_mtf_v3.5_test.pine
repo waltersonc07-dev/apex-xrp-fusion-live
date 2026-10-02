@@ -36,6 +36,16 @@
 // - ENTRY alert note gets an informational '⚠ macro <24h' line when a US CPI / NFP / FOMC release is due
 //   within 24h (hardcoded UTC list, input group 11). It NEVER blocks or alters an entry.
 // - Distinct title and alert tag ("v3.5-test") so Render/Telegram show these as test alerts.
+// v3.5 TEST caution lines (2026-10-02, Walter: "add shooting-star note, everything that helps to be careful"):
+// - ENTRY alert note gets INFORMATIONAL lines, each only when true, from CLOSED bars only (no request.security):
+//     '⚠ shooting star <2h'               bearish long-upper-wick 15m candle in the last 8 closed 15m bars
+//     '⚠ 2H bear momentum at resistance'  last closed 2H bar: 2 red bars, 2nd body bigger, + double-top KEY touch
+//     '⚠ near resistance'                 the v3.4-tag resState == "NEAR" (<= nearAtr x ATR2H below a pivot high)
+//     '⚠ macro <24h'                      unchanged (group 11)
+//   plus 'Caution N/4' and an advisory risk line (HALF size suggested when N >= 2). Definitions are the exact
+//   research rules of analysis/yt_J8tcoEiCI7k (cs_lib.py WICK/MOM/KEY, mirrored for bearish). They NEVER block,
+//   delay or resize a trade; the C1 trade list is unchanged (489 trades, PF 1.42; analysis/v35/caution_stats.py).
+//   Historically these warnings did NOT reliably separate winners from losers (descriptive only, see docs).
 // Python reference: src/resistance_tag.py (tags), analysis/book_methods (C1)
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -158,6 +168,13 @@ grpM = "11 · Macro warning (notify-only)"
 useMacro = input.bool(true, "Add '⚠ macro <24h' line to ENTRY alert", group = grpM)
 macroAheadH = input.float(24.0, "Warn if a release is due within (hours)", minval = 0.5, step = 0.5, group = grpM)
 macroEvents = input.string("NFP@2026-10-02T12:30,CPI@2026-10-14T12:30,FOMC@2026-10-28T18:00,NFP@2026-11-06T13:30,CPI@2026-11-10T13:30,NFP@2026-12-04T13:30,FOMC@2026-12-09T19:00,CPI@2026-12-10T13:30,FOMC@2027-01-27T19:00,FOMC@2027-03-17T18:00,FOMC@2027-04-28T18:00,FOMC@2027-06-09T18:00,FOMC@2027-07-28T18:00,FOMC@2027-09-15T18:00,FOMC@2027-10-27T18:00,FOMC@2027-12-08T19:00", "US macro releases (UTC, LABEL@YYYY-MM-DDTHH:MM, comma-separated)", group = grpM)
+
+// ─────────────────────────────────────────────
+// 12 · Caution lines + score (NOTIFY-ONLY, never filters or resizes)
+// ─────────────────────────────────────────────
+// Pattern constants are fixed on purpose: they are the exact research definitions (no tuning knobs).
+grpW = "12 · Caution lines (notify-only)"
+useCaution = input.bool(true, "Add caution lines + 'Caution N/4' score to ENTRY alert", group = grpW)
 
 // ════════════════════════════════════════════
 // Indicator engine
@@ -468,6 +485,105 @@ macroHit = macroList != ""
 macroTxt = macroHit ? "\\n⚠ macro <" + str.tostring(macroAheadH, "#.#") + "h: " + macroList : ""
 
 // ════════════════════════════════════════════
+// Caution lines + score — NOTIFY-ONLY (text only; never used by entry/exit/sizing)
+// Exact research rules: analysis/yt_J8tcoEiCI7k/cs_lib.py (patterns(), mirrored OHLC for the bearish side).
+// All values are from CLOSED bars: alerts fire once per bar close and calc_on_every_tick = false.
+// ════════════════════════════════════════════
+// (1) Shooting star = bearish mirror of WICK on 15m chart bars:
+//     upper wick >= 2 x body AND >= 50% of range, lower wick <= 30% of range, range >= 0.5 x ATR(14),
+//     after a 6-bar rise (close[1] > close[7]). "<2h" = on this or any of the previous 7 closed 15m bars.
+cwAtr14 = ta.atr(14)
+cwBody = math.abs(close - open)
+cwRng = high - low
+cwUw = high - math.max(open, close)
+cwLw = math.min(open, close) - low
+cwStar = cwUw >= 2.0 * cwBody and cwUw >= 0.5 * cwRng and cwLw <= 0.3 * cwRng and cwRng >= 0.5 * cwAtr14 and close[1] > close[7]
+cwStarN = math.sum(cwStar ? 1 : 0, 8)
+warnStar = nz(cwStarN) > 0
+
+// (2) 2H bearish momentum at a double-top resistance, on the LAST COMPLETED 2H bar (built from chart bars):
+//     MOM (mirrored) : 2H close < open, previous 2H close < open, body > previous body
+//     KEY (mirrored) : last two confirmed 2H swing highs (pivot L=R=5) within 1 x ATR14(2H) of each other,
+//                      2H high within +/-0.5 ATR of the latest one and 2H close below it,
+//                      on this completed 2H bar or any of the 3 before it.
+f_bearMomRes(tf, piv, keyLook, atrLen) =>
+    var float cO = na
+    var float cH = na
+    var float cL = na
+    var float cC = na
+    var float pC = na
+    var float atrR = na
+    var float trSum = 0.0
+    var int trN = 0
+    var array<float> hs = array.new<float>()
+    var float phCur = na
+    var float phPrev = na
+    var array<bool> keyQ = array.new<bool>()
+    var float prvO = na
+    var float prvC = na
+    var bool sig = false
+    bool newBar = ta.change(time(tf)) != 0
+    if newBar and not na(cC)
+        float tr = na(pC) ? cH - cL : math.max(cH - cL, math.abs(cH - pC), math.abs(cL - pC))
+        if trN < atrLen
+            trSum += tr
+            trN += 1
+            if trN == atrLen
+                atrR := trSum / atrLen
+        else
+            atrR := (atrR * (atrLen - 1) + tr) / atrLen
+        pC := cC
+        array.push(hs, cH)
+        if array.size(hs) > 2 * piv + 1
+            array.shift(hs)
+        if array.size(hs) == 2 * piv + 1
+            float ch = array.get(hs, piv)
+            bool isPH = true
+            for m = 0 to 2 * piv
+                if m < piv
+                    isPH := isPH and array.get(hs, m) < ch
+                else if m > piv
+                    isPH := isPH and array.get(hs, m) <= ch
+            if isPH
+                phPrev := phCur
+                phCur := ch
+        bool major = not na(phCur) and not na(phPrev) and not na(atrR) and math.abs(phCur - phPrev) <= 1.0 * atrR
+        bool key = major and cH >= phCur - 0.5 * atrR and cH <= phCur + 0.5 * atrR and cC < phCur
+        array.push(keyQ, key)
+        if array.size(keyQ) > keyLook
+            array.shift(keyQ)
+        bool anyKey = false
+        for kq in keyQ
+            if kq
+                anyKey := true
+        bool mom = not na(prvO) and cC < cO and prvC < prvO and math.abs(cC - cO) > math.abs(prvC - prvO)
+        sig := mom and anyKey
+        prvO := cO
+        prvC := cC
+    if newBar or na(cH)
+        cO := open
+        cH := high
+        cL := low
+        cC := close
+    else
+        cH := math.max(cH, high)
+        cL := math.min(cL, low)
+        cC := close
+    sig
+
+warnBearMom = f_bearMomRes("120", 5, 4, 14)
+
+// (3) Near resistance = the existing v3.4-tag state (group 10 inputs), reused as-is.
+warnNear = resState == "NEAR"
+// (4) Macro = the existing macro line (group 11).
+warnMacro = macroHit
+
+cautionN = (warnMacro ? 1 : 0) + (warnStar ? 1 : 0) + (warnBearMom ? 1 : 0) + (warnNear ? 1 : 0)
+cautionRisk = cautionN >= 2 ? "Risk: consider HALF size (advisory only — rules unchanged)" : "Risk: normal size per plan (advisory)"
+cautionTxt = useCaution ? (warnStar ? "\\n⚠ shooting star <2h" : "") + (warnBearMom ? "\\n⚠ 2H bear momentum at resistance" : "") + (warnNear ? "\\n⚠ near resistance" : "") + "\\nCaution " + str.tostring(cautionN) + "/4 · " + cautionRisk : ""
+cautionJson = useCaution ? ',"caution":' + str.tostring(cautionN) + ',"w_macro":' + (warnMacro ? "true" : "false") + ',"w_star":' + (warnStar ? "true" : "false") + ',"w_bearmom":' + (warnBearMom ? "true" : "false") + ',"w_near":' + (warnNear ? "true" : "false") + ',"half_size_hint":' + (cautionN >= 2 ? "true" : "false") + ',"bar_close":"' + str.format_time(time_close, "yyyy-MM-dd'T'HH:mm:ss'Z'", "UTC") + '"' : ""
+
+// ════════════════════════════════════════════
 // Alerts (notify-only — wire webhook in TradingView)
 // ════════════════════════════════════════════
 trailMoved = strategy.position_size > 0 and useStop and trailST and not na(stopLevel) and not na(stopLevel[1]) and stopLevel > stopLevel[1]
@@ -480,7 +596,7 @@ alertJson(action, note) =>
 
 if enterLong
     entryNote = "[v3.5 TEST] Long entry — 15m+2H stack synced, C1 " + (useC1 ? "held 2 x 2H opens" : "off")
-    alert(useTags ? alertJsonX("ENTRY", entryNote + " | " + tagTxt + macroTxt, tagJson) : alertJson("ENTRY", entryNote + macroTxt), alert.freq_once_per_bar_close)
+    alert(useTags ? alertJsonX("ENTRY", entryNote + " | " + tagTxt + macroTxt + cautionTxt, tagJson + cautionJson) : alertJsonX("ENTRY", entryNote + macroTxt + cautionTxt, cautionJson), alert.freq_once_per_bar_close)
 if exitFired
     alert(alertJson("EXIT", exitShort), alert.freq_once_per_bar_close)
 if stopFilled
@@ -563,7 +679,7 @@ srcCol = useLiveHTF ? color.red : color.lime
 syncTxt = requireSync ? (is2hOpen ? "FRESH now" : "waiting") : "off"
 syncCol = requireSync ? (is2hOpen ? color.lime : color.gray) : color.gray
 
-var table dash = table.new(position.top_right, 2, 13, bgcolor = color.new(color.black, 80), border_width = 1)
+var table dash = table.new(position.top_right, 2, 14, bgcolor = color.new(color.black, 80), border_width = 1)
 if showDash and barstate.islast
     table.cell(dash, 0, 0, "XRP STACK v3.5 TEST — 2H-SYNC + C1", text_color = color.yellow, text_size = size.small)
     table.cell(dash, 1, 0, "", text_size = size.small)
@@ -591,6 +707,8 @@ if showDash and barstate.islast
     table.cell(dash, 1, 11, useC1 ? (prevSyncLong ? "YES" : "no") : "off", text_color = useC1 and prevSyncLong ? color.lime : color.gray, text_size = size.tiny)
     table.cell(dash, 0, 12, "Macro <" + str.tostring(macroAheadH, "#.#") + "h", text_color = color.white, text_size = size.tiny)
     table.cell(dash, 1, 12, macroHit ? macroList : "none (" + str.tostring(array.size(evT)) + " events loaded)", text_color = macroHit ? color.orange : color.gray, text_size = size.tiny)
+    table.cell(dash, 0, 13, "Caution (info only)", text_color = color.white, text_size = size.tiny)
+    table.cell(dash, 1, 13, str.tostring(cautionN) + "/4" + (warnStar ? " star" : "") + (warnBearMom ? " 2Hmom" : "") + (warnNear ? " near" : "") + (warnMacro ? " macro" : ""), text_color = cautionN >= 2 ? color.orange : color.gray, text_size = size.tiny)
 
 // ════════════════════════════════════════════
 // Analytics — IS/OOS split and cost sweep
